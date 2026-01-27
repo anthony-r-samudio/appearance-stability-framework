@@ -4,7 +4,8 @@
 
 # The Appearance Stability Framework (ASF) is a diagnostic epistemic framework for detecting latent instability in complex systems.
 
-# 
+# ## Papers
+- [ASF Formal Definition (PDF)](papers/ASF_Formal_Definition.pdf)
 
 # ASF is not predictive. It does not forecast outcomes or optimize control.
 
