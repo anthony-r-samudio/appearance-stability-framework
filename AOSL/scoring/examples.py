@@ -1,0 +1,21 @@
+from AOSL.scoring.schema import ScoredOutput
+
+# Illustrative only — scores are not derived from real evaluation.
+EXAMPLE_OUTPUT = ScoredOutput(
+    prompt_id="example-001",
+    model_name="example-model",
+    output_text="This is a placeholder output used to illustrate the ScoredOutput structure.",
+    constraint_scores={
+        "c1":  0.9,
+        "c2":  0.8,
+        "c3":  0.7,
+        "c4":  0.6,
+        "c5":  0.8,
+        "c6":  1.0,
+        "c7":  0.7,
+        "c8":  0.5,
+        "c9":  0.6,
+        "c10": 0.7,
+    },
+    notes="Illustrative example only.",
+)

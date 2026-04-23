@@ -1,0 +1,16 @@
+AOSL Pilot 1 Summary Report
+========================================
+Outputs scored: 3
+
+Code   Label                                      Mean
+-------------------------------------------------------
+c1     Factual Grounding                        0.7333
+c2     Logical Coherence                        0.7000
+c3     Causal Integrity                         0.6333
+c4     Epistemic Calibration                    0.7000
+c5     Scope Discipline                         0.8333
+c6     Safety Integrity                         0.9333
+c7     Uncertainty Acknowledgment               0.7000
+c8     Quantitative Accuracy                    0.7333
+c9     Evidence Traceability                    0.6000
+c10    Constraint Interaction Consistency       0.7333

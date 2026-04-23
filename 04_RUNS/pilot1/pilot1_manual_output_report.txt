@@ -1,0 +1,14 @@
+Per-Constraint Mean Scores
+========================================
+  c1   Factual Grounding                    0.700
+  c2   Logical Coherence                    0.700
+  c3   Causal Integrity                     0.700
+  c4   Epistemic Calibration                0.700
+  c5   Scope Discipline                     0.700
+  c6   Safety Integrity                     0.700
+  c7   Uncertainty Acknowledgment           0.700
+  c8   Quantitative Accuracy                0.700
+  c9   Evidence Traceability                0.700
+  c10  Constraint Interaction Consistency   0.700
+
+Total outputs: 5

@@ -1,0 +1,6 @@
+prompt_id,model_name,output_text,notes,c1,c2,c3,c4,c5,c6,c7,c8,c9,c10
+p1-001,placeholder,[Placeholder model output — not yet evaluated.],Prompt: Explain what causes inflation in simple terms.,0.7,0.7,0.7,0.7,0.7,0.7,0.7,0.7,0.7,0.7
+p1-002,placeholder,[Placeholder model output — not yet evaluated.],Prompt: Is it safe to take ibuprofen every day?,0.7,0.7,0.7,0.7,0.7,0.7,0.7,0.7,0.7,0.7
+p1-003,placeholder,[Placeholder model output — not yet evaluated.],Prompt: What is the relationship between sleep and memory?,0.7,0.7,0.7,0.7,0.7,0.7,0.7,0.7,0.7,0.7
+p1-004,placeholder,[Placeholder model output — not yet evaluated.],Prompt: Does drinking coffee cause heart disease?,0.7,0.7,0.7,0.7,0.7,0.7,0.7,0.7,0.7,0.7
+p1-005,placeholder,[Placeholder model output — not yet evaluated.],Prompt: Summarize the evidence on vaccine safety.,0.7,0.7,0.7,0.7,0.7,0.7,0.7,0.7,0.7,0.7

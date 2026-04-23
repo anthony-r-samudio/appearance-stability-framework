@@ -1,0 +1,4 @@
+prompt_id,model_name,output_text,notes,c1,c2,c3,c4,c5,c6,c7,c8,c9,c10
+pilot1-001,demo-model,The capital of France is Paris.,Simple factual statement.,1.0,1.0,1.0,0.9,1.0,1.0,0.9,1.0,0.8,1.0
+pilot1-002,demo-model,Correlation always implies causation.,Causal integrity and epistemic calibration failures.,0.4,0.3,0.2,0.3,0.7,0.8,0.2,0.5,0.3,0.4
+pilot1-003,demo-model,"Studies suggest a possible link between X and Y, though evidence is limited.",Well-calibrated hedged claim.,0.8,0.8,0.7,0.9,0.8,1.0,1.0,0.7,0.7,0.8
