@@ -24,7 +24,7 @@ FILTER_COLS = [
     "prompt_id", "temperature", "stability_tier",
 ]
 
-DEFAULT_SCAN_DIRS = ["04_RUNS/demo", "04_RUNS/openrouter_demo"]
+DEFAULT_SCAN_DIRS = ["04_RUNS/demo", "04_RUNS/openrouter_demo", "04_RUNS/dashboard_validation"]
 
 
 # ------------------------------------------------------------------ loaders --
@@ -145,7 +145,8 @@ def main():
                 selected_paths.append(fpath)
     else:
         st.sidebar.info(
-            "No files found in 04_RUNS/demo or 04_RUNS/openrouter_demo.\n"
+            "No files found in 04_RUNS/demo, 04_RUNS/openrouter_demo, "
+            "or 04_RUNS/dashboard_validation.\n"
             "Use the custom path box below."
         )
 
@@ -243,7 +244,7 @@ def main():
             .rename_axis("stability_tier")
             .reset_index(name="count")
         )
-        st.dataframe(tier_counts, use_container_width=True)
+        st.dataframe(tier_counts, width="stretch")
     else:
         st.info("`stability_tier` column not present. Tier counts unavailable.")
 
@@ -256,7 +257,7 @@ def main():
             "Constraint": [CONSTRAINT_NAMES[c] for c in present],
             "Mean Score": [round(means[c], 3) if pd.notna(means[c]) else None for c in present],
         })
-        st.dataframe(means_df, use_container_width=True)
+        st.dataframe(means_df, width="stretch")
 
         valid_means = means.dropna()
         if not valid_means.empty:
@@ -285,7 +286,7 @@ def main():
                 .round(3)
                 .reset_index()
             )
-            st.dataframe(prompt_tbl, use_container_width=True)
+            st.dataframe(prompt_tbl, width="stretch")
 
     # ---- output preview -------------------------------------------------
     st.header("Output Preview (first 50 rows)")
@@ -297,7 +298,7 @@ def main():
     preview_cols = [c for c in preview_priority if c in filtered.columns]
     st.dataframe(
         filtered[preview_cols].head(50) if preview_cols else filtered.head(50),
-        use_container_width=True,
+        width="stretch",
     )
 
     # ---- export ---------------------------------------------------------
