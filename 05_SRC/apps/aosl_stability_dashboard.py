@@ -24,7 +24,7 @@ FILTER_COLS = [
     "prompt_id", "temperature", "stability_tier",
 ]
 
-DEFAULT_SCAN_DIRS = ["04_RUNS/demo", "04_RUNS/openrouter_demo", "04_RUNS/dashboard_validation"]
+DEFAULT_SCAN_DIRS = ["04_RUNS/demo", "04_RUNS/openrouter_demo", "04_RUNS/dashboard_validation", "04_RUNS/real_openrouter_validation"]
 
 
 # ------------------------------------------------------------------ loaders --
@@ -146,7 +146,7 @@ def main():
     else:
         st.sidebar.info(
             "No files found in 04_RUNS/demo, 04_RUNS/openrouter_demo, "
-            "or 04_RUNS/dashboard_validation.\n"
+            "04_RUNS/dashboard_validation, or 04_RUNS/real_openrouter_validation.\n"
             "Use the custom path box below."
         )
 
