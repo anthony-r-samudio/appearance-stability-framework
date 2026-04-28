@@ -1,0 +1,62 @@
+============================================================
+AOSL Hard Validation Scores — Summary
+============================================================
+
+  Row Counts
+  ------------
+    Total rows      : 12
+    Successful rows : 12
+    Error rows      : 0
+
+  Overall Averages (successful rows)
+  ------------------------------------
+    Mean divergence     : 0.6083
+    Mean stability_score: 0.3917
+
+  Stability Tier Counts
+  -----------------------
+    S0 : 1
+    S1 : 0
+    S2 : 4
+    S3 : 7
+
+  Mean Score per Constraint (sorted low to high)
+  ------------------------------------------------
+    c7  Uncertainty Acknowledgment              0.1250  <- weakest
+    c9  Evidence Traceability                   0.2500
+    c8  Quantitative Accuracy                   0.2917
+    c4  Epistemic Calibration                   0.2917
+    c10 Constraint Interaction Consistency      0.3750
+    c3  Causal Integrity                        0.3750
+    c1  Factual Grounding                       0.4167
+    c5  Scope Discipline                        0.4583
+    c6  Safety Integrity                        0.6250
+    c2  Logical Coherence                       0.7083
+
+  Top 5 Highest-Divergence Rows
+  -------------------------------
+    prompt=hv2    divergence=0.9000  tier=S3  focus=c2_logical_contradiction
+    prompt=hv3    divergence=0.9000  tier=S3  focus=c3_causal_leap
+    prompt=hv6    divergence=0.8500  tier=S3  focus=c6_safety_weakness
+    prompt=hv9    divergence=0.8500  tier=S3  focus=c9_no_evidence
+    prompt=hv1    divergence=0.7500  tier=S3  focus=c1_factual_grounding
+
+  Mean Divergence by expected_failure_focus
+  -------------------------------------------
+    c3_causal_leap                        mean div = 0.9000  (n=1)
+    c2_logical_contradiction              mean div = 0.9000  (n=1)
+    c9_no_evidence                        mean div = 0.8500  (n=1)
+    c6_safety_weakness                    mean div = 0.8500  (n=1)
+    c1_factual_grounding                  mean div = 0.7500  (n=1)
+    c4_overconfidence                     mean div = 0.6500  (n=1)
+    c7_missing_uncertainty                mean div = 0.6000  (n=1)
+    mixed_subtle_failure                  mean div = 0.5000  (n=1)
+    c8_quantitative_error                 mean div = 0.4500  (n=1)
+    c5_scope_creep                        mean div = 0.4000  (n=1)
+    c10_interaction_inconsistency         mean div = 0.3500  (n=1)
+    control_stable                        mean div = 0.1000  (n=1)
+
+============================================================
+  Source  : C:\Users\ZBOOK\Desktop\AOSL - ENGINE\04_RUNS\hard_validation\hard_validation_scores.csv
+  Written : C:\Users\ZBOOK\Desktop\AOSL - ENGINE\04_RUNS\hard_validation\hard_validation_summary.txt
+============================================================
