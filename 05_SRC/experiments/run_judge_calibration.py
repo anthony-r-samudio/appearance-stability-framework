@@ -39,6 +39,7 @@ from scoring.fast_batch_scorer import (
     DEFAULT_TIMEOUT_SECONDS,
     REAL_JUDGE_SCORER_LABEL,
     _check_api_key,
+    build_judge_prompt,
     load_input,
     save_outputs,
     score_row_real_judge,
@@ -136,6 +137,7 @@ def main(
     retries:           int          = DEFAULT_RETRIES,
     continue_on_error: bool         = True,
     max_tokens:        int          = DEFAULT_MAX_TOKENS,
+    dry_run:           bool         = False,
 ) -> None:
 
     boundary_notes = _load_boundary_notes()
@@ -145,6 +147,7 @@ def main(
     print(f"  input          : {INPUT_CSV}")
     print(f"  judge          : {judge_model}")
     print(f"  repeats        : {repeats}")
+    print(f"  limit          : {limit if limit is not None else 'none'}")
     print(f"  timeout        : {timeout}s per call")
     print(f"  retries        : {retries} (max {retries + 1} attempt(s) per row)")
     print(f"  max_tokens     : {max_tokens}")
@@ -154,16 +157,18 @@ def main(
             bn_label = f"yes ({_p.name})"
             break
     print(f"  boundary notes : {bn_label}")
+    print(f"  dry run        : {'yes (no API calls, no file writes)' if dry_run else 'no'}")
     print(f"  on error       : {'continue' if continue_on_error else 'abort'}")
     print(f"  outputs        : {OUT_DIR}")
     print("=" * 60)
     print()
 
-    try:
-        _check_api_key()
-    except EnvironmentError as exc:
-        print(f"ERROR: {exc}")
-        sys.exit(1)
+    if not dry_run:
+        try:
+            _check_api_key()
+        except EnvironmentError as exc:
+            print(f"ERROR: {exc}")
+            sys.exit(1)
 
     if not INPUT_CSV.exists():
         print(f"ERROR: Input file not found: {INPUT_CSV}")
@@ -175,6 +180,37 @@ def main(
         rows = rows[:limit]
     else:
         print(f"Loaded {len(rows)} row(s).")
+
+    # -- Dry-run: prompt size diagnostics, no API calls -----------------------
+    if dry_run:
+        print()
+        print("DRY-RUN — prompt size diagnostics (no API calls, no file writes)")
+        print()
+        bn_chars = len(boundary_notes) if boundary_notes else 0
+        print(
+            f"  {'prompt_id':<8}  {'prompt_chars':>12}  {'~tokens':>7}  "
+            f"{'max_tok':>7}  {'~total':>7}  {'boundary_notes':>14}"
+        )
+        print("  " + "-" * 65)
+        for row in rows:
+            pid         = str(row.get("prompt_id", "?"))
+            prompt_text = str(row.get("prompt_text", ""))
+            output_text = str(row.get("output_text", ""))
+            full_prompt = build_judge_prompt(prompt_text, output_text, boundary_notes)
+            p_chars     = len(full_prompt)
+            p_tokens    = p_chars // 4
+            total_est   = p_tokens + max_tokens
+            bn_note     = f"{bn_chars} chars" if boundary_notes else "none"
+            print(
+                f"  {pid:<8}  {p_chars:>12}  {p_tokens:>7}  "
+                f"{max_tokens:>7}  {total_est:>7}  {bn_note:>14}"
+            )
+        print()
+        print(f"  judge model : {judge_model}")
+        print(f"  max_tokens  : {max_tokens}  (reserved for judge response)")
+        print()
+        print("Add credits to OpenRouter or lower --max-tokens before running live.")
+        return
 
     total_calls = len(rows) * repeats
     print(f"Total judge calls planned: {total_calls}  ({len(rows)} rows x {repeats} repeats)")
@@ -306,6 +342,12 @@ if __name__ == "__main__":
         dest="continue_on_error",
         help="Abort on first error instead of skipping failed rows.",
     )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        default=False,
+        help="Print prompt size diagnostics without making any API calls or writing outputs.",
+    )
     parser.set_defaults(continue_on_error=True)
     args = parser.parse_args()
     main(
@@ -316,4 +358,5 @@ if __name__ == "__main__":
         retries           = args.retries,
         continue_on_error = args.continue_on_error,
         max_tokens        = args.max_tokens,
+        dry_run           = args.dry_run,
     )

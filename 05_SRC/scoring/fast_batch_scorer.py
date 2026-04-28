@@ -19,6 +19,8 @@ score_row_real_judge(row, judge_model, timeout,
 score_output_real_judge(prompt_text, output_text,
                         judge_model, timeout,
                         boundary_notes)                   -> tuple  (scores_dict, notes_str)
+build_judge_prompt(prompt_text, output_text,
+                   boundary_notes)                        -> str    (assembled prompt, no API call)
 """
 
 import concurrent.futures
@@ -282,27 +284,17 @@ def _parse_judge_scores(raw_text: str) -> tuple:
     return scores, notes
 
 
-def score_output_real_judge(
+def build_judge_prompt(
     prompt_text:    str,
     output_text:    str,
-    judge_model:    str   = DEFAULT_JUDGE_MODEL,
-    timeout:        float = DEFAULT_TIMEOUT_SECONDS,
-    max_tokens:     int   = DEFAULT_MAX_TOKENS,
-    boundary_notes: str   = "",
-) -> tuple:
+    boundary_notes: str = "",
+) -> str:
     """
-    Call the OpenRouter judge and return (scores_dict, notes_str).
+    Assemble the full judge prompt string without making any API call.
 
-    Timeout is passed to both the OpenAI SDK (HTTP-level) and a
-    concurrent.futures wrapper (hard wall-clock limit = timeout + 5s).
-
-    If boundary_notes is provided it is injected into the prompt immediately
-    before the === INPUT === section so the judge reads it before scoring.
-
-    Raises TimeoutError, EnvironmentError, CreditError, or ValueError on failure.
+    Inserts boundary_notes immediately before the === INPUT === section when
+    provided.  Safe to call from dry-run paths or for size diagnostics.
     """
-    from api.openrouter_client import score_output as _openrouter_score
-
     scoring_prompt = _JUDGE_PROMPT.format(
         prompt_text=prompt_text or "(not provided)",
         output_text=output_text,
@@ -320,6 +312,29 @@ def score_output_real_judge(
             )
         else:
             scoring_prompt += "\n\n=== AOSL CONSTRAINT BOUNDARY GUIDANCE ===\n" + boundary_notes
+
+    return scoring_prompt
+
+
+def score_output_real_judge(
+    prompt_text:    str,
+    output_text:    str,
+    judge_model:    str   = DEFAULT_JUDGE_MODEL,
+    timeout:        float = DEFAULT_TIMEOUT_SECONDS,
+    max_tokens:     int   = DEFAULT_MAX_TOKENS,
+    boundary_notes: str   = "",
+) -> tuple:
+    """
+    Call the OpenRouter judge and return (scores_dict, notes_str).
+
+    Timeout is passed to both the OpenAI SDK (HTTP-level) and a
+    concurrent.futures wrapper (hard wall-clock limit = timeout + 5s).
+
+    Raises TimeoutError, EnvironmentError, CreditError, or ValueError on failure.
+    """
+    from api.openrouter_client import score_output as _openrouter_score
+
+    scoring_prompt = build_judge_prompt(prompt_text, output_text, boundary_notes)
 
     # Belt-and-suspenders: SDK timeout fires first; thread wrapper is a hard cap.
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
