@@ -46,28 +46,35 @@ from scoring.fast_batch_scorer import (
 
 # -- Paths ---------------------------------------------------------------------
 
-INPUT_CSV           = _REPO_ROOT / "04_RUNS" / "hard_validation" / "hard_validation_inputs.csv"
-OUT_DIR             = _REPO_ROOT / "04_RUNS" / "judge_calibration"
-CSV_PATH            = OUT_DIR / "judge_calibration_scores.csv"
-JSONL_PATH          = OUT_DIR / "judge_calibration_scores.jsonl"
-_BOUNDARY_NOTES_PATH = _REPO_ROOT / "01_CANON" / "AOSL_CONSTRAINT_BOUNDARY_NOTES_v0.1.md"
+INPUT_CSV              = _REPO_ROOT / "04_RUNS" / "hard_validation" / "hard_validation_inputs.csv"
+OUT_DIR                = _REPO_ROOT / "04_RUNS" / "judge_calibration"
+CSV_PATH               = OUT_DIR / "judge_calibration_scores.csv"
+JSONL_PATH             = OUT_DIR / "judge_calibration_scores.jsonl"
+_BOUNDARY_COMPACT_PATH = _REPO_ROOT / "01_CANON" / "AOSL_JUDGE_BOUNDARY_COMPACT_v0.1.md"
+_BOUNDARY_FULL_PATH    = _REPO_ROOT / "01_CANON" / "AOSL_CONSTRAINT_BOUNDARY_NOTES_v0.1.md"
 
 
 # -- Boundary notes loader -----------------------------------------------------
 
 def _load_boundary_notes() -> str:
     """
-    Load constraint boundary guidance from 01_CANON/AOSL_CONSTRAINT_BOUNDARY_NOTES_v0.1.md.
-    Returns the file contents as a string, or "" if the file is missing.
-    Prints a one-line status message either way.
+    Load constraint boundary guidance for injection into every judge call.
+
+    Priority:
+      1. 01_CANON/AOSL_JUDGE_BOUNDARY_COMPACT_v0.1.md  (preferred — low token cost)
+      2. 01_CANON/AOSL_CONSTRAINT_BOUNDARY_NOTES_v0.1.md  (fallback — full notes)
+
+    Returns the file contents as a string, or "" if neither file exists.
+    Prints one status line naming the file loaded and its character count.
     """
-    if _BOUNDARY_NOTES_PATH.exists():
-        content = _BOUNDARY_NOTES_PATH.read_text(encoding="utf-8").strip()
-        print(f"  [boundary notes] Loaded: {_BOUNDARY_NOTES_PATH.name}  ({len(content)} chars)")
-        return content
+    for path in (_BOUNDARY_COMPACT_PATH, _BOUNDARY_FULL_PATH):
+        if path.exists():
+            content = path.read_text(encoding="utf-8").strip()
+            print(f"  [boundary notes] Loaded: {path.name}  ({len(content)} chars)")
+            return content
     print(
-        f"  [boundary notes] WARNING: file not found — scoring without boundary guidance.\n"
-        f"                   Expected: {_BOUNDARY_NOTES_PATH}"
+        "  [boundary notes] WARNING: no boundary guidance file found — scoring without it.\n"
+        f"                   Tried: {_BOUNDARY_COMPACT_PATH.name}, {_BOUNDARY_FULL_PATH.name}"
     )
     return ""
 
@@ -141,7 +148,12 @@ def main(
     print(f"  timeout        : {timeout}s per call")
     print(f"  retries        : {retries} (max {retries + 1} attempt(s) per row)")
     print(f"  max_tokens     : {max_tokens}")
-    print(f"  boundary notes : {'yes (' + _BOUNDARY_NOTES_PATH.name + ')' if boundary_notes else 'no (file missing)'}")
+    bn_label = "no (file missing)"
+    for _p in (_BOUNDARY_COMPACT_PATH, _BOUNDARY_FULL_PATH):
+        if _p.exists():
+            bn_label = f"yes ({_p.name})"
+            break
+    print(f"  boundary notes : {bn_label}")
     print(f"  on error       : {'continue' if continue_on_error else 'abort'}")
     print(f"  outputs        : {OUT_DIR}")
     print("=" * 60)
