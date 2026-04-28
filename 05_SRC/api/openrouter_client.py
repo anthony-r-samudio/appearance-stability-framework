@@ -27,12 +27,18 @@ def generate_response(model: str, prompt: str, temperature: float = 0.7) -> str:
     return response.choices[0].message.content.strip()
 
 
-def score_output(model: str, scoring_prompt: str, temperature: float = 0.0) -> str:
+def score_output(
+    model:          str,
+    scoring_prompt: str,
+    temperature:    float = 0.0,
+    timeout:        float = 60.0,
+) -> str:
     """Send a scoring prompt to a judge model and return the raw text response."""
     client = _get_client()
     response = client.chat.completions.create(
         model=model,
         messages=[{"role": "user", "content": scoring_prompt}],
         temperature=temperature,
+        timeout=timeout,
     )
     return response.choices[0].message.content.strip()
