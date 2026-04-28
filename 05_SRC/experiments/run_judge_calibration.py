@@ -130,17 +130,22 @@ def _make_error_row(row: dict, error_message: str, calibration_repeat: int) -> d
 # -- Main ----------------------------------------------------------------------
 
 def main(
-    judge_model:       str          = DEFAULT_JUDGE_MODEL,
-    repeats:           int          = 3,
-    limit:             "int | None" = None,
-    timeout:           int          = DEFAULT_TIMEOUT_SECONDS,
-    retries:           int          = DEFAULT_RETRIES,
-    continue_on_error: bool         = True,
-    max_tokens:        int          = DEFAULT_MAX_TOKENS,
-    dry_run:           bool         = False,
+    judge_model:         str          = DEFAULT_JUDGE_MODEL,
+    repeats:             int          = 3,
+    limit:               "int | None" = None,
+    timeout:             int          = DEFAULT_TIMEOUT_SECONDS,
+    retries:             int          = DEFAULT_RETRIES,
+    continue_on_error:   bool         = True,
+    max_tokens:          int          = DEFAULT_MAX_TOKENS,
+    dry_run:             bool         = False,
+    no_boundary_notes:   bool         = False,
 ) -> None:
 
-    boundary_notes = _load_boundary_notes()
+    if no_boundary_notes:
+        print("  [boundary notes] Disabled via --no-boundary-notes")
+        boundary_notes = ""
+    else:
+        boundary_notes = _load_boundary_notes()
 
     print("=" * 60)
     print("AOSL Judge Calibration Runner")
@@ -151,11 +156,14 @@ def main(
     print(f"  timeout        : {timeout}s per call")
     print(f"  retries        : {retries} (max {retries + 1} attempt(s) per row)")
     print(f"  max_tokens     : {max_tokens}")
-    bn_label = "no (file missing)"
-    for _p in (_BOUNDARY_COMPACT_PATH, _BOUNDARY_FULL_PATH):
-        if _p.exists():
-            bn_label = f"yes ({_p.name})"
-            break
+    if no_boundary_notes:
+        bn_label = "disabled (--no-boundary-notes)"
+    else:
+        bn_label = "no (file missing)"
+        for _p in (_BOUNDARY_COMPACT_PATH, _BOUNDARY_FULL_PATH):
+            if _p.exists():
+                bn_label = f"yes ({_p.name})"
+                break
     print(f"  boundary notes : {bn_label}")
     print(f"  dry run        : {'yes (no API calls, no file writes)' if dry_run else 'no'}")
     print(f"  on error       : {'continue' if continue_on_error else 'abort'}")
@@ -348,15 +356,23 @@ if __name__ == "__main__":
         default=False,
         help="Print prompt size diagnostics without making any API calls or writing outputs.",
     )
+    parser.add_argument(
+        "--no-boundary-notes",
+        action="store_true",
+        default=False,
+        dest="no_boundary_notes",
+        help="Skip loading boundary guidance files. Useful for cost comparison via --dry-run.",
+    )
     parser.set_defaults(continue_on_error=True)
     args = parser.parse_args()
     main(
-        judge_model       = args.judge_model,
-        repeats           = args.repeats,
-        limit             = args.limit,
-        timeout           = args.timeout,
-        retries           = args.retries,
-        continue_on_error = args.continue_on_error,
-        max_tokens        = args.max_tokens,
-        dry_run           = args.dry_run,
+        judge_model         = args.judge_model,
+        repeats             = args.repeats,
+        limit               = args.limit,
+        timeout             = args.timeout,
+        retries             = args.retries,
+        continue_on_error   = args.continue_on_error,
+        max_tokens          = args.max_tokens,
+        dry_run             = args.dry_run,
+        no_boundary_notes   = args.no_boundary_notes,
     )
