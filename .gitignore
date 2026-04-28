@@ -31,3 +31,6 @@ desktop.ini
 
 # Editor artifacts
 .vscode/settings.json
+
+# Claude local settings
+.claude/
