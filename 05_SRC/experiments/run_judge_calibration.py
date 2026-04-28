@@ -8,6 +8,9 @@ Input  : 04_RUNS/hard_validation/hard_validation_inputs.csv
 Outputs: 04_RUNS/judge_calibration/judge_calibration_scores.csv
          04_RUNS/judge_calibration/judge_calibration_scores.jsonl
 
+Boundary notes (optional, loaded automatically if present):
+         01_CANON/AOSL_CONSTRAINT_BOUNDARY_NOTES_v0.1.md
+
 Usage
 -----
 Quick smoke test (3 rows, 2 repeats):
@@ -43,10 +46,30 @@ from scoring.fast_batch_scorer import (
 
 # -- Paths ---------------------------------------------------------------------
 
-INPUT_CSV  = _REPO_ROOT / "04_RUNS" / "hard_validation" / "hard_validation_inputs.csv"
-OUT_DIR    = _REPO_ROOT / "04_RUNS" / "judge_calibration"
-CSV_PATH   = OUT_DIR / "judge_calibration_scores.csv"
-JSONL_PATH = OUT_DIR / "judge_calibration_scores.jsonl"
+INPUT_CSV           = _REPO_ROOT / "04_RUNS" / "hard_validation" / "hard_validation_inputs.csv"
+OUT_DIR             = _REPO_ROOT / "04_RUNS" / "judge_calibration"
+CSV_PATH            = OUT_DIR / "judge_calibration_scores.csv"
+JSONL_PATH          = OUT_DIR / "judge_calibration_scores.jsonl"
+_BOUNDARY_NOTES_PATH = _REPO_ROOT / "01_CANON" / "AOSL_CONSTRAINT_BOUNDARY_NOTES_v0.1.md"
+
+
+# -- Boundary notes loader -----------------------------------------------------
+
+def _load_boundary_notes() -> str:
+    """
+    Load constraint boundary guidance from 01_CANON/AOSL_CONSTRAINT_BOUNDARY_NOTES_v0.1.md.
+    Returns the file contents as a string, or "" if the file is missing.
+    Prints a one-line status message either way.
+    """
+    if _BOUNDARY_NOTES_PATH.exists():
+        content = _BOUNDARY_NOTES_PATH.read_text(encoding="utf-8").strip()
+        print(f"  [boundary notes] Loaded: {_BOUNDARY_NOTES_PATH.name}  ({len(content)} chars)")
+        return content
+    print(
+        f"  [boundary notes] WARNING: file not found — scoring without boundary guidance.\n"
+        f"                   Expected: {_BOUNDARY_NOTES_PATH}"
+    )
+    return ""
 
 
 # -- Print helpers -------------------------------------------------------------
@@ -108,16 +131,19 @@ def main(
     max_tokens:        int          = DEFAULT_MAX_TOKENS,
 ) -> None:
 
+    boundary_notes = _load_boundary_notes()
+
     print("=" * 60)
     print("AOSL Judge Calibration Runner")
-    print(f"  input      : {INPUT_CSV}")
-    print(f"  judge      : {judge_model}")
-    print(f"  repeats    : {repeats}")
-    print(f"  timeout    : {timeout}s per call")
-    print(f"  retries    : {retries} (max {retries + 1} attempt(s) per row)")
-    print(f"  max_tokens : {max_tokens}")
-    print(f"  on error   : {'continue' if continue_on_error else 'abort'}")
-    print(f"  outputs    : {OUT_DIR}")
+    print(f"  input          : {INPUT_CSV}")
+    print(f"  judge          : {judge_model}")
+    print(f"  repeats        : {repeats}")
+    print(f"  timeout        : {timeout}s per call")
+    print(f"  retries        : {retries} (max {retries + 1} attempt(s) per row)")
+    print(f"  max_tokens     : {max_tokens}")
+    print(f"  boundary notes : {'yes (' + _BOUNDARY_NOTES_PATH.name + ')' if boundary_notes else 'no (file missing)'}")
+    print(f"  on error       : {'continue' if continue_on_error else 'abort'}")
+    print(f"  outputs        : {OUT_DIR}")
     print("=" * 60)
     print()
 
@@ -164,7 +190,10 @@ def main(
                 if attempt > 1:
                     print(f"          [RETRY] attempt {attempt}/{max_attempts}")
 
-                result = score_row_real_judge(row, judge_model=judge_model, timeout=timeout, max_tokens=max_tokens)
+                result = score_row_real_judge(
+                    row, judge_model=judge_model, timeout=timeout,
+                    max_tokens=max_tokens, boundary_notes=boundary_notes,
+                )
 
                 if not result.get("scorer_error"):
                     break

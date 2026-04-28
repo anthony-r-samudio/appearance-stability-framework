@@ -14,9 +14,11 @@ load_input(path)                                          -> list[dict]
 score_batch(rows, scorer, judge_model, timeout, retries)  -> list[dict]
 save_outputs(rows, csv_path, jsonl_path)                  -> None
 score_row(row)                                            -> dict   (demo mode)
-score_row_real_judge(row, judge_model, timeout)           -> dict   (real-judge, single attempt)
+score_row_real_judge(row, judge_model, timeout,
+                     boundary_notes)                      -> dict   (real-judge, single attempt)
 score_output_real_judge(prompt_text, output_text,
-                        judge_model, timeout)             -> tuple  (scores_dict, notes_str)
+                        judge_model, timeout,
+                        boundary_notes)                   -> tuple  (scores_dict, notes_str)
 """
 
 import concurrent.futures
@@ -281,17 +283,21 @@ def _parse_judge_scores(raw_text: str) -> tuple:
 
 
 def score_output_real_judge(
-    prompt_text: str,
-    output_text: str,
-    judge_model: str   = DEFAULT_JUDGE_MODEL,
-    timeout:     float = DEFAULT_TIMEOUT_SECONDS,
-    max_tokens:  int   = DEFAULT_MAX_TOKENS,
+    prompt_text:    str,
+    output_text:    str,
+    judge_model:    str   = DEFAULT_JUDGE_MODEL,
+    timeout:        float = DEFAULT_TIMEOUT_SECONDS,
+    max_tokens:     int   = DEFAULT_MAX_TOKENS,
+    boundary_notes: str   = "",
 ) -> tuple:
     """
     Call the OpenRouter judge and return (scores_dict, notes_str).
 
     Timeout is passed to both the OpenAI SDK (HTTP-level) and a
     concurrent.futures wrapper (hard wall-clock limit = timeout + 5s).
+
+    If boundary_notes is provided it is injected into the prompt immediately
+    before the === INPUT === section so the judge reads it before scoring.
 
     Raises TimeoutError, EnvironmentError, CreditError, or ValueError on failure.
     """
@@ -301,6 +307,19 @@ def score_output_real_judge(
         prompt_text=prompt_text or "(not provided)",
         output_text=output_text,
     )
+
+    if boundary_notes:
+        marker = "\n=== INPUT ==="
+        if marker in scoring_prompt:
+            idx = scoring_prompt.index(marker)
+            scoring_prompt = (
+                scoring_prompt[:idx]
+                + "\n\n=== AOSL CONSTRAINT BOUNDARY GUIDANCE ===\n"
+                + boundary_notes
+                + scoring_prompt[idx:]
+            )
+        else:
+            scoring_prompt += "\n\n=== AOSL CONSTRAINT BOUNDARY GUIDANCE ===\n" + boundary_notes
 
     # Belt-and-suspenders: SDK timeout fires first; thread wrapper is a hard cap.
     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
@@ -343,10 +362,11 @@ def score_row(row: dict) -> dict:
 
 
 def score_row_real_judge(
-    row:         dict,
-    judge_model: str   = DEFAULT_JUDGE_MODEL,
-    timeout:     float = DEFAULT_TIMEOUT_SECONDS,
-    max_tokens:  int   = DEFAULT_MAX_TOKENS,
+    row:            dict,
+    judge_model:    str   = DEFAULT_JUDGE_MODEL,
+    timeout:        float = DEFAULT_TIMEOUT_SECONDS,
+    max_tokens:     int   = DEFAULT_MAX_TOKENS,
+    boundary_notes: str   = "",
 ) -> dict:
     """
     Real-judge mode, single attempt.
@@ -364,7 +384,8 @@ def score_row_real_judge(
 
     try:
         scores, notes = score_output_real_judge(
-            prompt_text, output_text, judge_model, timeout=timeout, max_tokens=max_tokens
+            prompt_text, output_text, judge_model,
+            timeout=timeout, max_tokens=max_tokens, boundary_notes=boundary_notes,
         )
         metrics = _compute_metrics(scores)
         result.update(scores)
@@ -384,12 +405,13 @@ def score_row_real_judge(
 # -- Batch scorer --------------------------------------------------------------
 
 def score_batch(
-    rows:        list,
-    scorer:      str   = "demo",
-    judge_model: str   = DEFAULT_JUDGE_MODEL,
-    timeout:     float = DEFAULT_TIMEOUT_SECONDS,
-    retries:     int   = DEFAULT_RETRIES,
-    max_tokens:  int   = DEFAULT_MAX_TOKENS,
+    rows:           list,
+    scorer:         str   = "demo",
+    judge_model:    str   = DEFAULT_JUDGE_MODEL,
+    timeout:        float = DEFAULT_TIMEOUT_SECONDS,
+    retries:        int   = DEFAULT_RETRIES,
+    max_tokens:     int   = DEFAULT_MAX_TOKENS,
+    boundary_notes: str   = "",
 ) -> list:
     """
     Score all rows.
@@ -405,7 +427,10 @@ def score_batch(
         for row in rows:
             result = None
             for _ in range(retries + 1):
-                result = score_row_real_judge(row, judge_model, timeout=timeout, max_tokens=max_tokens)
+                result = score_row_real_judge(
+                    row, judge_model,
+                    timeout=timeout, max_tokens=max_tokens, boundary_notes=boundary_notes,
+                )
                 if not result.get("scorer_error"):
                     break
                 if result.get("scorer_credit_error"):
