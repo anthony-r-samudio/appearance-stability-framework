@@ -1,8 +1,12 @@
 import os
 
-from openai import OpenAI
+from openai import OpenAI, APIStatusError
 
 _BASE_URL = "https://openrouter.ai/api/v1"
+
+
+class CreditError(Exception):
+    """Raised when OpenRouter returns HTTP 402 (insufficient credits or max_tokens too high)."""
 
 
 def _get_client() -> OpenAI:
@@ -32,13 +36,23 @@ def score_output(
     scoring_prompt: str,
     temperature:    float = 0.0,
     timeout:        float = 60.0,
+    max_tokens:     int   = 800,
 ) -> str:
     """Send a scoring prompt to a judge model and return the raw text response."""
     client = _get_client()
-    response = client.chat.completions.create(
-        model=model,
-        messages=[{"role": "user", "content": scoring_prompt}],
-        temperature=temperature,
-        timeout=timeout,
-    )
+    try:
+        response = client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": scoring_prompt}],
+            temperature=temperature,
+            timeout=timeout,
+            max_tokens=max_tokens,
+        )
+    except APIStatusError as exc:
+        if exc.status_code == 402:
+            raise CreditError(
+                "OpenRouter credit/max_tokens error (HTTP 402). "
+                "Try lowering --max-tokens or adding credits."
+            ) from exc
+        raise
     return response.choices[0].message.content.strip()

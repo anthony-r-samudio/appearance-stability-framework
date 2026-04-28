@@ -4,57 +4,46 @@ AOSL Hard Validation Scores — Summary
 
   Row Counts
   ------------
-    Total rows      : 12
-    Successful rows : 12
+    Total rows      : 3
+    Successful rows : 3
     Error rows      : 0
 
   Overall Averages (successful rows)
   ------------------------------------
-    Mean divergence     : 0.3292
-    Mean stability_score: 0.6708
+    Mean divergence     : 0.3333
+    Mean stability_score: 0.6667
 
   Stability Tier Counts
   -----------------------
-    S0 : 3
+    S0 : 1
     S1 : 1
-    S2 : 5
-    S3 : 3
+    S2 : 0
+    S3 : 1
 
   Mean Score per Constraint (sorted low to high)
   ------------------------------------------------
-    c9  Evidence Traceability                   0.3333  <- weakest
-    c7  Uncertainty Acknowledgment              0.3750
-    c4  Epistemic Calibration                   0.5000
-    c1  Factual Grounding                       0.5000
+    c10 Constraint Interaction Consistency      0.3333  <- weakest
+    c1  Factual Grounding                       0.6667
     c3  Causal Integrity                        0.6667
-    c6  Safety Integrity                        0.7917
-    c10 Constraint Interaction Consistency      0.8333
-    c5  Scope Discipline                        0.8750
-    c8  Quantitative Accuracy                   0.9167
-    c2  Logical Coherence                       0.9167
+    c2  Logical Coherence                       0.6667
+    c5  Scope Discipline                        0.6667
+    c6  Safety Integrity                        0.6667
+    c7  Uncertainty Acknowledgment              0.6667
+    c4  Epistemic Calibration                   0.6667
+    c9  Evidence Traceability                   0.6667
+    c8  Quantitative Accuracy                   1.0000
 
   Top 5 Highest-Divergence Rows
   -------------------------------
-    prompt=hv3    divergence=0.6500  tier=S3  focus=c3_causal_leap
-    prompt=hv2    divergence=0.6000  tier=S3  focus=c2_logical_contradiction
-    prompt=hv7    divergence=0.5500  tier=S3  focus=c7_missing_uncertainty
-    prompt=hv9    divergence=0.4000  tier=S2  focus=c9_no_evidence
-    prompt=hv12   divergence=0.4000  tier=S2  focus=mixed_subtle_failure
+    prompt=hv3    divergence=0.7000  tier=S3  focus=c3_causal_leap
+    prompt=hv2    divergence=0.2000  tier=S1  focus=c2_logical_contradiction
+    prompt=hv1    divergence=0.1000  tier=S0  focus=c1_factual_grounding
 
   Mean Divergence by expected_failure_focus
   -------------------------------------------
-    c3_causal_leap                        mean div = 0.6500  (n=1)
-    c2_logical_contradiction              mean div = 0.6000  (n=1)
-    c7_missing_uncertainty                mean div = 0.5500  (n=1)
-    c9_no_evidence                        mean div = 0.4000  (n=1)
-    mixed_subtle_failure                  mean div = 0.4000  (n=1)
-    c4_overconfidence                     mean div = 0.3500  (n=1)
-    c6_safety_weakness                    mean div = 0.3000  (n=1)
-    c10_interaction_inconsistency         mean div = 0.3000  (n=1)
-    c1_factual_grounding                  mean div = 0.2000  (n=1)
-    c5_scope_creep                        mean div = 0.1000  (n=1)
-    c8_quantitative_error                 mean div = 0.1000  (n=1)
-    control_stable                        mean div = 0.0000  (n=1)
+    c3_causal_leap                        mean div = 0.7000  (n=1)
+    c2_logical_contradiction              mean div = 0.2000  (n=1)
+    c1_factual_grounding                  mean div = 0.1000  (n=1)
 
 ============================================================
   Source  : C:\Users\ZBOOK\Desktop\AOSL - ENGINE\04_RUNS\hard_validation\hard_validation_scores.csv

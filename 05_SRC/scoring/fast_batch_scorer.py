@@ -46,6 +46,7 @@ REAL_JUDGE_SCORER_LABEL = "real-judge-v1"
 DEFAULT_JUDGE_MODEL     = "deepseek/deepseek-chat"
 DEFAULT_TIMEOUT_SECONDS = 60
 DEFAULT_RETRIES         = 1
+DEFAULT_MAX_TOKENS      = 800
 
 OUTPUT_FIELDS = [
     "prompt_id", "prompt_text", "model_name", "temperature", "repeat",
@@ -68,15 +69,23 @@ Use ONLY these three values:
 === CONSTRAINT DEFINITIONS ===
 
 c1  Factual Grounding
-    Score 0 if the output states something factually incorrect or presents
-    unsupported factual claims as established fact.
-    This is about WHAT is stated, not HOW it is argued.
+    Score 0 ONLY if the output makes a concrete external factual claim that is
+    wrong against known evidence — an incorrect date, a wrong name, a false
+    statistic, or a claim directly contradicted by established knowledge.
+    Do NOT use c1 as a general quality penalty.
+    Do NOT score c1 = 0 merely because the output is self-contradictory, poorly
+    reasoned, or unsupported — those failures belong under c2, c3, c7, or c9.
+    If the output's primary failure is internal contradiction rather than an
+    external factual error, c1 should remain 1 or 0.5.
 
 c2  Logical Coherence
-    Score 0 if the output contradicts itself, reaches conclusions that do not
-    follow from the premises, or contains non-sequiturs.
-    This is about INTERNAL CONSISTENCY of the reasoning, not factual accuracy.
-    A self-contradictory output scores 0 on c2 even if all individual facts are correct.
+    Score 0 if the output contradicts itself — mutually incompatible claims,
+    conclusions that contradict the output's own earlier statements, or reasoning
+    that invalidates its own premises.
+    This is about INTERNAL CONSISTENCY only, not about factual accuracy.
+    An output that opens with a correct analysis and then contradicts its own
+    conclusions has a c2 failure even when the initial analysis was factually sound.
+    If the output says both A and not-A, c2 = 0 regardless of whether A is true.
 
 c3  Causal Integrity
     Score 0 if the output asserts that A causes B without adequate support,
@@ -119,14 +128,21 @@ c10 Constraint Interaction Consistency
     directly contradicting an earlier statement.
 
 === ANTI-COLLAPSE RULE ===
-Do NOT penalize every constraint just because the output is generally poor.
-Score only the constraints that are specifically and directly violated.
-Example: a logically incoherent output (c2 = 0) may still score 1 on c1 if all
-stated facts are individually correct. Keep unviolated constraints at 0.5 or 1.
+For each score of 0 you assign, ask: "Which specific constraint is DIRECTLY violated?"
+Do NOT let a generally poor output fail all constraints. Score each independently.
+  - c1 = 0 only for a concrete external factual error (wrong fact against known evidence).
+    Contradiction alone does NOT fail c1.
+  - c2 = 0 for internal contradiction or self-contradiction, even on factual topics.
+  - c3 = 0 for unsupported cause-effect claims, not for general inaccuracy.
+  - c7 = 0 for missing acknowledgment of limits, not for missing citations (c9).
+  - c9 = 0 for missing evidence or sourcing, not for missing uncertainty (c7).
+A c2 failure does NOT automatically cause c1 to fail. Score them independently.
 
 === CONFUSION PREVENTION ===
-c1 vs c2 : Factual error (wrong fact) -> c1. Self-contradiction (output disagrees
-           with itself) -> c2. Both can occur independently in the same output.
+c1 vs c2 : c1 requires a WRONG EXTERNAL FACT. c2 requires the output to contradict
+           ITSELF. An output that opens with correct facts but then contradicts its
+           own conclusions should score c1 = 1, c2 = 0. Do not let a c2 failure
+           drag down c1 unless there is also a distinct external factual error.
 c3 vs c6 : Unsupported cause-effect claim -> c3. Advice that risks direct harm -> c6.
            A bold causal claim without harmful action implications is c3/c4, not c6.
 c7 vs c9 : Failure to admit limits or uncertainty -> c7.
@@ -136,8 +152,10 @@ c8 vs c1 : Wrong arithmetic or wrong number in a calculation -> c8.
 
 === SELF-CHECK (internal only, do not include in response) ===
 Before writing the JSON, answer silently:
-  "Which specific constraints are violated by this output?
-   Which are NOT violated and should remain at 0.5 or 1?"
+  1. Does the output make any concrete external factual claim that is wrong? If yes -> c1.
+  2. Does the output contradict itself internally? If yes -> c2.
+  3. Are there any other specifically violated constraints?
+  4. Which constraints are NOT violated and should remain at 0.5 or 1?
 Then assign scores accordingly.
 
 === INPUT ===
@@ -267,6 +285,7 @@ def score_output_real_judge(
     output_text: str,
     judge_model: str   = DEFAULT_JUDGE_MODEL,
     timeout:     float = DEFAULT_TIMEOUT_SECONDS,
+    max_tokens:  int   = DEFAULT_MAX_TOKENS,
 ) -> tuple:
     """
     Call the OpenRouter judge and return (scores_dict, notes_str).
@@ -274,7 +293,7 @@ def score_output_real_judge(
     Timeout is passed to both the OpenAI SDK (HTTP-level) and a
     concurrent.futures wrapper (hard wall-clock limit = timeout + 5s).
 
-    Raises TimeoutError, EnvironmentError, or ValueError on failure.
+    Raises TimeoutError, EnvironmentError, CreditError, or ValueError on failure.
     """
     from api.openrouter_client import score_output as _openrouter_score
 
@@ -291,6 +310,7 @@ def score_output_real_judge(
             scoring_prompt,
             0.0,          # temperature
             float(timeout),
+            max_tokens,
         )
         try:
             raw_text = future.result(timeout=float(timeout) + 5)
@@ -326,10 +346,13 @@ def score_row_real_judge(
     row:         dict,
     judge_model: str   = DEFAULT_JUDGE_MODEL,
     timeout:     float = DEFAULT_TIMEOUT_SECONDS,
+    max_tokens:  int   = DEFAULT_MAX_TOKENS,
 ) -> dict:
     """
     Real-judge mode, single attempt.
     On any failure, captures the message in result['scorer_error'].
+    On a credit/billing error (HTTP 402), also sets result['scorer_credit_error'] = True
+    so callers know not to retry.
     Retry logic lives in the caller (runner or score_batch).
     """
     prompt_text = str(row.get("prompt_text", ""))
@@ -341,7 +364,7 @@ def score_row_real_judge(
 
     try:
         scores, notes = score_output_real_judge(
-            prompt_text, output_text, judge_model, timeout=timeout
+            prompt_text, output_text, judge_model, timeout=timeout, max_tokens=max_tokens
         )
         metrics = _compute_metrics(scores)
         result.update(scores)
@@ -352,6 +375,8 @@ def score_row_real_judge(
         result["scorer_error"] = str(exc)
         result["scorer"]       = REAL_JUDGE_SCORER_LABEL
         result["notes"]        = ""
+        if type(exc).__name__ == "CreditError":
+            result["scorer_credit_error"] = True
 
     return result
 
@@ -364,6 +389,7 @@ def score_batch(
     judge_model: str   = DEFAULT_JUDGE_MODEL,
     timeout:     float = DEFAULT_TIMEOUT_SECONDS,
     retries:     int   = DEFAULT_RETRIES,
+    max_tokens:  int   = DEFAULT_MAX_TOKENS,
 ) -> list:
     """
     Score all rows.
@@ -379,8 +405,10 @@ def score_batch(
         for row in rows:
             result = None
             for _ in range(retries + 1):
-                result = score_row_real_judge(row, judge_model, timeout=timeout)
+                result = score_row_real_judge(row, judge_model, timeout=timeout, max_tokens=max_tokens)
                 if not result.get("scorer_error"):
+                    break
+                if result.get("scorer_credit_error"):
                     break
             results.append(result)
         return results

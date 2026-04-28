@@ -33,6 +33,7 @@ for _p in (str(_REPO_ROOT), str(_SRC_ROOT)):
 from scoring.fast_batch_scorer import (
     CONSTRAINT_CODES,
     DEFAULT_JUDGE_MODEL,
+    DEFAULT_MAX_TOKENS,
     DEFAULT_RETRIES,
     DEFAULT_TIMEOUT_SECONDS,
     REAL_JUDGE_SCORER_LABEL,
@@ -104,16 +105,18 @@ def main(
     timeout:           int          = DEFAULT_TIMEOUT_SECONDS,
     retries:           int          = DEFAULT_RETRIES,
     continue_on_error: bool         = True,
+    max_tokens:        int          = DEFAULT_MAX_TOKENS,
 ) -> None:
 
     print("=" * 60)
     print("AOSL Hard Validation — Real Judge Batch")
-    print(f"  input   : {INPUT_CSV}")
-    print(f"  judge   : {judge_model}")
-    print(f"  timeout : {timeout}s per call")
-    print(f"  retries : {retries} (max {retries + 1} attempt(s) per row)")
-    print(f"  on error: {'continue' if continue_on_error else 'abort'}")
-    print(f"  outputs : {RUN_DIR}")
+    print(f"  input      : {INPUT_CSV}")
+    print(f"  judge      : {judge_model}")
+    print(f"  timeout    : {timeout}s per call")
+    print(f"  retries    : {retries} (max {retries + 1} attempt(s) per row)")
+    print(f"  max_tokens : {max_tokens}")
+    print(f"  on error   : {'continue' if continue_on_error else 'abort'}")
+    print(f"  outputs    : {RUN_DIR}")
     print("=" * 60)
     print()
 
@@ -157,11 +160,13 @@ def main(
             if attempt > 1:
                 print(f"        [RETRY] attempt {attempt}/{max_attempts}")
 
-            result = score_row_real_judge(row, judge_model=judge_model, timeout=timeout)
+            result = score_row_real_judge(row, judge_model=judge_model, timeout=timeout, max_tokens=max_tokens)
 
             if not result.get("scorer_error"):
                 break
             last_error = str(result.get("scorer_error", "unknown error"))
+            if result.get("scorer_credit_error"):
+                break
 
         # -- Outcome -----------------------------------------------------------
         if result.get("scorer_error"):
@@ -233,6 +238,13 @@ if __name__ == "__main__":
         help=f"Retries after a failed call (0 = no retry). Default: {DEFAULT_RETRIES}",
     )
     parser.add_argument(
+        "--max-tokens",
+        type=int,
+        default=DEFAULT_MAX_TOKENS,
+        metavar="N",
+        help=f"Max tokens for the judge response. Default: {DEFAULT_MAX_TOKENS}",
+    )
+    parser.add_argument(
         "--no-continue-on-error",
         action="store_false",
         dest="continue_on_error",
@@ -246,4 +258,5 @@ if __name__ == "__main__":
         timeout           = args.timeout,
         retries           = args.retries,
         continue_on_error = args.continue_on_error,
+        max_tokens        = args.max_tokens,
     )
