@@ -1,0 +1,18 @@
+record_id,prompt_id,model_name,generator_model,temperature,repeat,judge_model,c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,D,D_norm,stability_tier,output_text,prompt_text,notes,error,timestamp_utc
+real_p1__t0.7,real_p1,deepseek/deepseek-chat,deepseek/deepseek-chat,0.7,,deepseek/deepseek-chat,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,0.0,0.0,S0,"The boiling point of water at sea level is **100°C (212°F)** under standard atmospheric pressure (1 atm or 101.325 kPa). 
+
+### **Why?**
+The boiling point of a liquid is the temperature at which its vapor pressure equals the external pressure acting on its surface. At sea level, the atmospheric pressure is about **1 atmosphere (atm)**, which is sufficient to keep water in a liquid state until it reaches **100°C**. At this temperature:
+
+1. **Vapor Pressure = Atmospheric Pressure** – The vapor pressure of water increases with temperature. At 100°C, it matches the surrounding air pressure, allowing bubbles of water vapor to form and escape (boiling).
+2. **Effect of Altitude** – At higher altitudes, atmospheric pressure decreases, so water boils at lower temperatures (e.g., ~93°C at 2,000 meters). Conversely, under increased pressure (e.g., in a pressure cooker), water boils at a higher temperature.
+
+Thus, the boiling point is determined by the balance between water's vapor pressure and the external atmospheric pressure.","What is the boiling point of water at sea level, and why?",,,2026-04-27T14:50:33.282988+00:00
+real_p2__t0.7,real_p2,deepseek/deepseek-chat,deepseek/deepseek-chat,0.7,,deepseek/deepseek-chat,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,0.0,0.0,S0,"The sky appears blue because sunlight is scattered in all directions by the gases and particles in Earth's atmosphere, and blue light is scattered more than other colors due to its shorter wavelength. This phenomenon is called Rayleigh scattering.",Explain in one or two sentences why the sky appears blue.,,,2026-04-27T14:50:39.662044+00:00
+real_p3__t0.7,real_p3,deepseek/deepseek-chat,deepseek/deepseek-chat,0.7,,deepseek/deepseek-chat,0.9,0.9,0.8,0.8,0.9,0.8,0.7,0.8,0.9,0.8,1.7,0.17,S1,"Certainly! Regular physical exercise has numerous evidence-based benefits. Here are two well-documented ones:
+
+1. **Improved Cardiovascular Health**: Regular exercise strengthens the heart and improves circulation, reducing the risk of cardiovascular diseases such as hypertension, heart attack, and stroke. Studies consistently show that physical activity lowers blood pressure, improves cholesterol levels, and enhances overall heart function.
+
+2. **Enhanced Mental Health and Reduced Stress**: Exercise is linked to the release of endorphins, which improve mood and reduce feelings of stress, anxiety, and depression. Research demonstrates that regular physical activity can be as effective as medication or therapy in managing mild to moderate depression and anxiety.
+
+These benefits are supported by extensive scientific research and highlight the importance of incorporating physical activity into daily routines.",Name two evidence-based benefits of regular physical exercise.,,,2026-04-27T14:51:29.702529+00:00

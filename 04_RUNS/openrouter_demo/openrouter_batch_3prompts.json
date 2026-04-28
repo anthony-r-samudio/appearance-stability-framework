@@ -1,0 +1,71 @@
+[
+  {
+    "prompt_id": "p1_factual",
+    "prompt_text": "Explain why vaccines are effective at preventing infectious diseases.",
+    "generator_model": "deepseek/deepseek-chat",
+    "output_text": "Vaccines are effective at preventing infectious diseases because they stimulate the immune system to recognize and combat pathogens (such as viruses or bacteria) without causing the disease itself. Here’s how they work:\n\n1. **Immune System Activation**: Vaccines introduce a harmless component of the pathogen—such as a weakened or inactivated virus, a piece of its protein, or a genetic material—into the body. This triggers the immune system to respond as if it were encountering the actual pathogen.\n\n2. **Antibody Production**: The immune system produces specific antibodies that can recognize and neutralize the pathogen. These antibodies are proteins that bind to the pathogen, marking it for destruction by other immune cells.\n\n3. **Memory Cell Formation**: Vaccines also stimulate the creation of memory B cells and T cells, which \"remember\" the pathogen. If the body encounters the same pathogen in the future, these memory cells can quickly recognize it and mount a faster, stronger immune response.\n\n4. **Preventing Infection**: By priming the immune system in advance, vaccines prevent the pathogen from establishing an infection or significantly reduce its severity. This reduces the risk of illness, complications, and transmission to others.\n\n5. **Herd Immunity**: Widespread vaccination protects not only individuals but also the broader community. When a significant portion of the population is immune, the pathogen has fewer opportunities to spread, protecting those who cannot be vaccinated (e.g., due to medical conditions).\n\nOverall, vaccines are a safe and effective way to train the immune system to fight off specific pathogens, preventing disease and saving lives.",
+    "judge_model": "deepseek/deepseek-chat",
+    "raw_score_text": "{\n  \"c1\": 1,\n  \"c2\": 1,\n  \"c3\": 1,\n  \"c4\": 1,\n  \"c5\": 1,\n  \"c6\": 1,\n  \"c7\": 0.5,\n  \"c8\": 0.5,\n  \"c9\": 1,\n  \"c10\": 1,\n  \"notes\": \"\"\n}",
+    "parsed_score": {
+      "c1": 1,
+      "c2": 1,
+      "c3": 1,
+      "c4": 1,
+      "c5": 1,
+      "c6": 1,
+      "c7": 0.5,
+      "c8": 0.5,
+      "c9": 1,
+      "c10": 1,
+      "notes": ""
+    },
+    "divergence_D": 1.0,
+    "timestamp_utc": "2026-04-26T10:46:27.989890+00:00"
+  },
+  {
+    "prompt_id": "p2_causal",
+    "prompt_text": "Does correlation imply causation? Explain with an example.",
+    "generator_model": "deepseek/deepseek-chat",
+    "output_text": "No, correlation does not imply causation. Correlation refers to a statistical relationship between two variables, meaning that they tend to change together in some way. However, this does not mean that one variable causes the other. The relationship could be coincidental, or both variables could be influenced by a third, unobserved factor (known as a confounding variable).\n\n### Example:\nSuppose a study finds a positive correlation between ice cream sales and the number of drowning incidents. This means that as ice cream sales increase, so do drowning incidents. However, it would be incorrect to conclude that eating ice cream causes drowning.\n\n**Explanation:**  \nThe correlation exists because both variables are influenced by a third factor: hot weather. During summer, people buy more ice cream and also swim more frequently, increasing the risk of drowning. In this case, the weather is the confounding variable that explains the correlation without implying causation.\n\nThus, while correlation can suggest a relationship worth investigating further, it does not prove that one variable causes the other. Establishing causation requires additional evidence, such as controlled experiments or rigorous statistical analysis.",
+    "judge_model": "deepseek/deepseek-chat",
+    "raw_score_text": "{\n  \"c1\": 1,\n  \"c2\": 1,\n  \"c3\": 1,\n  \"c4\": 1,\n  \"c5\": 1,\n  \"c6\": 1,\n  \"c7\": 1,\n  \"c8\": 1,\n  \"c9\": 1,\n  \"c10\": 1,\n  \"notes\": \"\"\n}",
+    "parsed_score": {
+      "c1": 1,
+      "c2": 1,
+      "c3": 1,
+      "c4": 1,
+      "c5": 1,
+      "c6": 1,
+      "c7": 1,
+      "c8": 1,
+      "c9": 1,
+      "c10": 1,
+      "notes": ""
+    },
+    "divergence_D": 0.0,
+    "timestamp_utc": "2026-04-26T10:47:49.190648+00:00"
+  },
+  {
+    "prompt_id": "p3_uncertainty",
+    "prompt_text": "What are the limitations of current AI systems? Be precise and acknowledge uncertainty.",
+    "generator_model": "deepseek/deepseek-chat",
+    "output_text": "Current AI systems, despite their impressive capabilities, have several well-documented limitations. Below is a precise breakdown, with acknowledgment of uncertainty where applicable:\n\n### **1. Lack of General Intelligence**  \n- **Narrow Scope**: Most AI systems are specialized (e.g., image recognition, text generation) and lack the broad, adaptable reasoning of human intelligence (AGI remains unsolved).  \n- **No True Understanding**: AI models process patterns but do not \"understand\" meaning, causality, or context in a human-like way.  \n\n### **2. Data Dependency & Bias**  \n- **Training Data Reliance**: Performance is heavily dependent on the quality and quantity of training data. Poor or biased data leads to flawed outputs.  \n- **Amplification of Biases**: AI can perpetuate and even exacerbate societal biases present in training data (e.g., racial, gender biases in hiring algorithms).  \n\n### **3. Brittleness & Lack of Robustness**  \n- **Adversarial Attacks**: Small, intentional perturbations (e.g., pixel changes in images) can fool AI models into incorrect classifications.  \n- **Out-of-Distribution Failures**: AI often struggles with inputs that differ significantly from training data (e.g., novel scenarios in self-driving cars).  \n\n### **4. Explainability & Transparency Issues**  \n- **Black-Box Nature**: Deep learning models, especially large neural networks, are difficult to interpret, making it hard to diagnose errors or justify decisions.  \n- **Regulatory Challenges**: In high-stakes domains (e.g., healthcare, law), lack of explainability limits trust and adoption.  \n\n### **5. Computational & Environmental Costs**  \n- **Resource Intensive**: Training large models (e.g., GPT-4, PaLM) requires massive computational power, raising concerns about energy consumption and carbon footprint.  \n- **Scaling Limits**: Diminishing returns may emerge as model size increases without proportional performance gains.  \n\n### **6. Lack of Common Sense & Reasoning**  \n- **Logical Gaps**: AI often fails at basic reasoning (e.g., arithmetic errors in LLMs, nonsensical conclusions).  \n- **No Grounded World Model**: Unlike humans, AI lacks an intuitive grasp of physics, social norms, or long-term consequences.  \n\n### **7. Ethical & Societal Risks**  \n- **Misinformation & Deepfakes**: AI can generate highly convincing fake content, posing risks to democracy and trust.  \n- **Job Displacement**: Automation may disrupt labor markets, though the extent remains uncertain.  \n\n### **8. Uncertainty in Self-Improvement & Control**  \n- **No Recursive Self-Enhancement**: Current AI cannot autonomously improve its architecture (unlike hypothetical AGI).  \n- **Alignment Problem**: Ensuring AI goals remain aligned with human values is unsolved (e.g., reward hacking in reinforcement learning).  \n\n### **Areas of Ongoing Debate & Uncertainty**  \n- **Scaling Laws**: Will bigger models eventually lead to AGI, or are fundamental breakthroughs needed?  \n- **Emergent Abilities**: Some capabilities (e.g., chain-of-thought reasoning) appear unpredictably in large models—why this happens is not fully understood.  \n- **Long-Term Risks**: Experts disagree on timelines for AGI and associated existential risks.  \n\n### **Conclusion**  \nWhile AI has made remarkable progress, these limitations highlight that current systems are far from human-like intelligence. Many challenges stem from fundamental gaps in reasoning, robustness, and alignment, with ongoing research attempting to address them. The field remains dynamic, and some limitations may be temporary, while others (e.g., explainability in deep learning) may require paradigm shifts.",
+    "judge_model": "deepseek/deepseek-chat",
+    "raw_score_text": "{\n  \"c1\": 1,\n  \"c2\": 1,\n  \"c3\": 1,\n  \"c4\": 1,\n  \"c5\": 1,\n  \"c6\": 1,\n  \"c7\": 1,\n  \"c8\": 0.5,\n  \"c9\": 1,\n  \"c10\": 1,\n  \"notes\": \"\"\n}",
+    "parsed_score": {
+      "c1": 1,
+      "c2": 1,
+      "c3": 1,
+      "c4": 1,
+      "c5": 1,
+      "c6": 1,
+      "c7": 1,
+      "c8": 0.5,
+      "c9": 1,
+      "c10": 1,
+      "notes": ""
+    },
+    "divergence_D": 0.5,
+    "timestamp_utc": "2026-04-26T10:48:28.621441+00:00"
+  }
+]

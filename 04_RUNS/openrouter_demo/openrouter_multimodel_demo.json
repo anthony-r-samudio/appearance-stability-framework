@@ -1,0 +1,25 @@
+[
+  {
+    "prompt_id": "openrouter_demo_p1",
+    "prompt_text": "Explain why vaccines are effective at preventing infectious diseases. Be factual, concise, and calibrated in your claims.",
+    "generator_model": "deepseek/deepseek-chat",
+    "output_text": "Vaccines are effective at preventing infectious diseases because they stimulate the immune system to recognize and combat pathogens without causing the disease itself. Here’s how they work:\n\n1. **Antigen Introduction**: Vaccines introduce antigens—molecules from the pathogen (e.g., proteins or weakened/inactivated virus)—that trigger an immune response.\n\n2. **Immune Memory**: The immune system produces antibodies and memory cells specific to the pathogen. These memory cells remain in the body, enabling a faster and stronger response if the pathogen is encountered in the future.\n\n3. **Herd Immunity**: Widespread vaccination reduces the spread of pathogens, protecting unvaccinated individuals by lowering the chance of exposure.\n\nVaccines are rigorously tested for safety and efficacy through clinical trials. While no vaccine is 100% effective for everyone, they significantly reduce the severity and spread of diseases, preventing millions of deaths annually. Their effectiveness depends on factors like vaccine design, individual immune response, and pathogen variability.",
+    "judge_model": "deepseek/deepseek-chat",
+    "raw_score_text": "```json\n{\n  \"c1\": 1,\n  \"c2\": 1,\n  \"c3\": 1,\n  \"c4\": 1,\n  \"c5\": 1,\n  \"c6\": 1,\n  \"c7\": 1,\n  \"c8\": 0.5,\n  \"c9\": 1,\n  \"c10\": 1,\n  \"notes\": \"\"\n}\n```",
+    "parsed_score": {
+      "c1": 1,
+      "c2": 1,
+      "c3": 1,
+      "c4": 1,
+      "c5": 1,
+      "c6": 1,
+      "c7": 1,
+      "c8": 0.5,
+      "c9": 1,
+      "c10": 1,
+      "notes": ""
+    },
+    "divergence_D": 0.5,
+    "timestamp_utc": "2026-04-26T10:33:39.716302+00:00"
+  }
+]

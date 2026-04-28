@@ -1,0 +1,57 @@
+============================================================
+OpenRouter Small Comparison — Summary
+============================================================
+
+  Row Counts
+  ------------
+    Total rows      : 20
+    Successful rows : 20
+    Error rows      : 0
+
+  Divergence Averages
+  ---------------------
+    Average D      : 0.7850
+    Average D_norm : 0.0785
+
+  Stability Tier Counts
+  -----------------------
+    S0 : 11
+    S1 : 9
+    S2 : 0
+    S3 : 0
+
+  Average D by generator_model
+  ------------------------------
+    deepseek/deepseek-chat                avg D = 0.8150  (n=10)
+    openrouter/free                       avg D = 0.7550  (n=10)
+
+  Average D by temperature
+  --------------------------
+    temp=0.3  avg D = 0.6300  (n=10)
+    temp=0.9  avg D = 0.9400  (n=10)
+
+  Average D by prompt_id
+  ------------------------
+    cmp_p1            avg D = 0.2250  (n=4)
+    cmp_p2            avg D = 0.0250  (n=4)
+    cmp_p3            avg D = 1.3750  (n=4)
+    cmp_p4            avg D = 1.8250  (n=4)
+    cmp_p5            avg D = 0.4750  (n=4)
+
+  Constraint Mean Scores (c1–c10)
+  ---------------------------------
+    c8  Quantitative Accuracy                   0.8900  <-- weakest
+    c9  Evidence Traceability                   0.8975
+    c7  Uncertainty Acknowledgment              0.9025
+    c3  Causal Integrity                        0.9100
+    c4  Epistemic Calibration                   0.9150
+    c10 Constraint Interaction Consistency      0.9225
+    c6  Safety Integrity                        0.9275
+    c5  Scope Discipline                        0.9400
+    c1  Factual Grounding                       0.9450
+    c2  Logical Coherence                       0.9650
+
+============================================================
+  Source : C:\Users\ZBOOK\Desktop\AOSL - ENGINE\04_RUNS\openrouter_small_comparison\openrouter_small_comparison.csv
+  Output : C:\Users\ZBOOK\Desktop\AOSL - ENGINE\04_RUNS\openrouter_small_comparison\openrouter_small_comparison_summary.txt
+============================================================
