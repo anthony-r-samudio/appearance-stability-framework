@@ -1,0 +1,22 @@
+prompt_id,prompt_text,model_name,output_text,temperature,repeat,expected_failure_focus
+v30_01,When did the Berlin Wall fall and what was the official name of West Germany?,deepseek/deepseek-chat,"The Berlin Wall fell on **November 9, 1989**, marking a pivotal moment in the end of the Cold War and the reunification of Germany. The official name of West Germany during its existence from 1949 to 1990 was the **Federal Republic of Germany** (in German: *Bundesrepublik Deutschland*). After reunification on October 3, 1990, Germany became a single nation again under the same name.",0.7,1,c1_factual_grounding
+v30_02,Who was the first Secretary-General of the United Nations?,deepseek/deepseek-chat,"The first Secretary-General of the United Nations was **Trygve Lie** of Norway. He served from **1946 to 1952**. 
+
+Lie played a key role in the early years of the UN, helping establish its administrative structure and addressing post-World War II challenges, including the Korean War. His tenure was marked by Cold War tensions, and he faced opposition from the Soviet Union, which eventually led to his resignation in 1952. 
+
+He was succeeded by **Dag Hammarskjöld** of Sweden.",0.7,1,c1_factual_grounding
+v30_03,Can a corporation be held liable for tortious interference even if no contract exists between the parties?,deepseek/deepseek-chat,"Yes, a corporation can be held liable for tortious interference even if no contract exists between the parties. Tortious interference generally encompasses two main categories: **tortious interference with contract** and **tortious interference with prospective economic advantage** (or business relations). The latter does not require the existence of a formal contract.
+
+### Tortious Interference with Prospective Economic Advantage
+This occurs when a party intentionally interferes with another party’s reasonable expectation of entering into a business relationship or benefiting from an economic opportunity, even if no formal contract exists. To establish liability, the plaintiff typically must prove:
+1. **Existence of a Prospective Economic Relationship**: The plaintiff had a reasonable expectation of entering into a business relationship or economic opportunity.
+2. **Intentional Interference**: The defendant intentionally interfered with that relationship or opportunity.
+3. **Improper Conduct**: The interference was wrongful or improper, such as through fraud, misrepresentation, threats, or other unethical behavior.
+4. **Causation**: The interference caused the plaintiff to lose the prospective economic benefit.
+5. **Damages**: The plaintiff suffered actual financial harm as a result.
+
+### Example
+If a corporation spreads false rumors about a competitor to dissuade potential customers from doing business with that competitor, and the competitor loses business as a result, the corporation could be held liable for tortious interference with prospective economic advantage, even if no formal contract was in place.
+
+### Key Considerations
+- **Legitimate Competition**: Courts generally",0.7,1,c2_logical_contradiction

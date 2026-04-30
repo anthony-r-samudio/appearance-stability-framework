@@ -20,14 +20,22 @@ def _get_client() -> OpenAI:
     return OpenAI(base_url=_BASE_URL, api_key=api_key)
 
 
-def generate_response(model: str, prompt: str, temperature: float = 0.7) -> str:
+def generate_response(
+    model:       str,
+    prompt:      str,
+    temperature: float    = 0.7,
+    max_tokens:  "int | None" = None,
+) -> str:
     """Send a prompt to a model on OpenRouter and return the text response."""
     client = _get_client()
-    response = client.chat.completions.create(
+    kwargs: dict = dict(
         model=model,
         messages=[{"role": "user", "content": prompt}],
         temperature=temperature,
     )
+    if max_tokens is not None:
+        kwargs["max_tokens"] = max_tokens
+    response = client.chat.completions.create(**kwargs)
     return response.choices[0].message.content.strip()
 
 
