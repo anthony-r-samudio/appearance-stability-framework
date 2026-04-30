@@ -292,9 +292,8 @@ def main(
         print()
         bn_chars = len(boundary_notes) if boundary_notes else 0
 
-        total_prompt_tokens = 0
-        total_calls         = 0
-
+        # Per-row prompt size table (unchanged regardless of resume)
+        row_prompt_tokens = {}   # pid -> p_tokens
         print(
             f"  {'prompt_id':<8}  {'prompt_chars':>12}  {'~tokens':>7}  "
             f"{'max_tok':>7}  {'~total':>7}  {'boundary_notes':>14}"
@@ -313,25 +312,44 @@ def main(
                 f"  {pid:<8}  {p_chars:>12}  {p_tokens:>7}  "
                 f"{max_tokens:>7}  {total_est:>7}  {bn_note:>14}"
             )
-            total_prompt_tokens += p_tokens
+            row_prompt_tokens[pid] = p_tokens
 
-        total_calls              = len(rows) * repeats
-        total_response_tokens    = total_calls * max_tokens
-        total_prompt_tokens_all  = total_prompt_tokens * repeats
-        total_token_budget       = total_prompt_tokens_all + total_response_tokens
+        # Budget accounting — subtract already-done pairs when --resume is active
+        total_planned    = len(rows) * repeats
+        resume_skipped   = 0
+        live_prompt_tok  = 0
+
+        for row in rows:
+            pid = str(row.get("prompt_id", "?"))
+            p_tokens = row_prompt_tokens[pid]
+            for rpt in range(1, repeats + 1):
+                if resume and (pid, str(rpt)) in already_done:
+                    resume_skipped += 1
+                else:
+                    live_prompt_tok += p_tokens
+
+        live_calls           = total_planned - resume_skipped
+        live_response_tokens = live_calls * max_tokens
+        live_token_budget    = live_prompt_tok + live_response_tokens
 
         print()
-        print(f"  selected rows        : {len(rows)}")
-        print(f"  repeats              : {repeats}")
-        print(f"  total planned calls  : {total_calls}")
-        print(f"  est. prompt tokens   : {total_prompt_tokens_all:,}  ({total_prompt_tokens:,} × {repeats} repeats)")
-        print(f"  est. response tokens : {total_response_tokens:,}  ({max_tokens} × {total_calls} calls)")
-        print(f"  est. token budget    : {total_token_budget:,}")
+        print(f"  selected rows                 : {len(rows)}")
+        print(f"  repeats                       : {repeats}")
+        print(f"  total planned calls           : {total_planned}")
+        if resume:
+            print(f"  resume skipped calls          : {resume_skipped}")
+            print(f"  remaining live calls          : {live_calls}")
+        print(f"  est. prompt tokens            : {live_prompt_tok:,}")
+        print(f"  est. response tokens          : {live_response_tokens:,}  ({max_tokens} × {live_calls} calls)")
+        print(f"  est. token budget             : {live_token_budget:,}")
         print()
         print(f"  judge model : {judge_model}")
         print(f"  max_tokens  : {max_tokens}  (reserved for judge response)")
         print()
-        print("Add credits to OpenRouter or lower --max-tokens / --cost-mode cheap before running live.")
+        if resume and live_calls == 0:
+            print("Resume dry-run: all selected prompt/repeat pairs are already successfully scored. No live calls needed.")
+        else:
+            print("Add credits to OpenRouter or lower --max-tokens / --cost-mode cheap before running live.")
         return
 
     total_calls = len(rows) * repeats
