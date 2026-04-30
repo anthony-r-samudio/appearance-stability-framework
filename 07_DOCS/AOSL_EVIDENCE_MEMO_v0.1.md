@@ -22,39 +22,55 @@ synthetic outputs in the expected order.
 The three validated datasets form a clean separation:
 
 ```
-stable real  <  pressured real  <  synthetic flawed
-   0.0117    <     0.1067       <      0.2050
+stable real  <  pressured real (3-repeat)  <  synthetic flawed
+   0.0117    <          0.0939             <      0.2050
 ```
 
 This ordering was produced by the same judge model across three independent datasets,
 with zero errors in any run. The aggregate divergence signal is present and directionally
-consistent. Exact constraint attribution and repeat stability have not yet been confirmed.
+consistent. Exact constraint attribution remains weak and validation_30 repeat stability
+has not yet been confirmed.
 
 ---
 
 ## Proof Ladder
 
-| Step | Dataset                    | Mean D | Std D  | Rows | Interpretation                              |
-|------|----------------------------|--------|--------|------|---------------------------------------------|
-| 1    | real_model_validation_30   | 0.0117 | 0.0252 | 30   | Stable real outputs; near-zero divergence   |
-| 2    | real_failure_validation_30 | 0.1067 | 0.0888 | 30   | Real outputs under structural failure pressure |
-| 3    | validation_30              | 0.2050 | 0.1493 | 30   | Hand-crafted synthetic intentional failures |
+| Step | Dataset                    | Mean D | Std D  | Rows | Repeats | Interpretation                                  |
+|------|----------------------------|--------|--------|------|---------|-------------------------------------------------|
+| 1    | real_model_validation_30   | 0.0117 | 0.0252 | 30   | 1       | Stable real outputs; near-zero divergence       |
+| 2    | real_failure_validation_30 | 0.0939 | 0.0905 | 90   | 3       | Real outputs under structural failure pressure  |
+| 3    | validation_30              | 0.2050 | 0.1493 | 30   | 1       | Hand-crafted synthetic intentional failures     |
 
-All runs: 1 repeat, cheap judge mode, deepseek/deepseek-chat, 0 errors.
+All runs: cheap judge mode, deepseek/deepseek-chat, 0 errors.
 
 ---
 
 ## Divergence Gaps
 
-| Comparison                              | Gap    |
-|-----------------------------------------|--------|
-| Pressured real − stable real            | +0.0950 |
-| Synthetic flawed − pressured real       | +0.0983 |
-| Synthetic flawed − stable real          | +0.1933 |
-| Pressured real / stable real (ratio)    | ~9.1×   |
+| Comparison                                        | Gap     |
+|---------------------------------------------------|---------|
+| Pressured real (3-repeat) − stable real           | +0.0822 |
+| Synthetic flawed − pressured real (3-repeat)      | +0.1111 |
+| Synthetic flawed − stable real                    | +0.1933 |
+| Pressured real / stable real (ratio)              | ~8.0×   |
 
-The two adjacent gaps (0.0950 and 0.0983) are nearly equal in magnitude, suggesting
-the divergence scale is approximately linear across these three conditions.
+The gap between pressured real and stable real (0.0822) is smaller than the gap between
+synthetic flawed and pressured real (0.1111), reflecting that even structurally pressured
+real outputs remain meaningfully below hand-crafted synthetic failures.
+
+---
+
+## 3-Repeat Update
+
+The original real_failure_validation_30 baseline used 1 repeat (mean D=0.1067). The
+3-repeat run (90 scored rows) produced a mean D of 0.0939.
+
+- The signal decreased slightly (−0.0128) but did not collapse.
+- Prompt-level repeatability is acceptable: avg prompt std dev = 0.0281 (threshold 0.1).
+- Constraint attribution remains below threshold at 0.44 (threshold 0.6).
+- The ordering stable real < pressured real < synthetic flawed is preserved.
+- Verdict: KEEP_BUT_RECALIBRATE (attribution weak; some constraint scores drift across
+  repeats — max drift 0.5774).
 
 ---
 
@@ -67,12 +83,13 @@ the divergence scale is approximately linear across these three conditions.
   baseline (real_model_validation_30), mean D is 0.0117 with max D of 0.1000 across
   30 rows. False-positive rate on clean real outputs is low.
 
-- **It detects elevated divergence in real outputs under structural pressure.** On
-  real_failure_validation_30, mean D is 0.1067 — a 9.1× lift above the stable real
-  baseline, using the same model and judge at the same temperature.
+- **It detects elevated divergence in real outputs under structural pressure, with
+  acceptable repeat stability.** On real_failure_validation_30 (3 repeats), mean D is
+  0.0939 — an 8.0× lift above the stable real baseline. Avg prompt-level std dev is
+  0.0281, confirming the signal is not a single-pass artifact.
 
 - **Its strongest current signal is aggregate divergence, not exact constraint attribution.**
-  Attribution match rates are 0.60 (synthetic), 0.48 (pressured real), and 0.16
+  Attribution match rates are 0.60 (synthetic), 0.44 (pressured real 3-repeat), and 0.16
   (stable real). The divergence score discriminates; the constraint-level routing does not
   yet do so reliably.
 
@@ -82,7 +99,7 @@ the divergence scale is approximately linear across these three conditions.
 
 - **Full proof.** Three datasets from a single judge do not constitute a proof.
   The evidence is directionally consistent and passes an initial ordered-separation test.
-  It does not yet pass replication, independence, or generalization tests.
+  It does not yet pass independence or cross-model generalization tests.
 
 - **Judge independence.** All three runs use deepseek/deepseek-chat as the judge. No
   second judge model has been tested. The scoring behavior may be specific to this model.
@@ -91,17 +108,16 @@ the divergence scale is approximately linear across these three conditions.
   Whether a different generator model would produce similarly separable divergence scores
   is unknown.
 
-- **Exact constraint attribution reliability.** Attribution match rates of 0.48–0.60 mean
+- **Exact constraint attribution reliability.** Attribution match rates of 0.44–0.60 mean
   the judge correctly identifies the primary failing constraint in roughly half of cases.
   Individual constraint scores should not yet be used for constraint-specific diagnostics.
 
 - **Production readiness.** Scoring latency, cost per row, behavior under real input
   diversity, and edge-case handling have not been characterized.
 
-- **Repeat stability for validation_30 and real_failure_validation_30.** Both datasets
-  have been scored with 1 repeat only. Prompt-level standard deviations are unavailable.
-  The verdicts (KEEP_ADV_JUDGE and KEEP_BUT_RECALIBRATE respectively) are based on
-  single-pass estimates and cannot be confirmed until 3-repeat runs are completed.
+- **Repeat stability for validation_30.** validation_30 has been scored with 1 repeat
+  only. Prompt-level standard deviations for that dataset are unavailable. The
+  KEEP_ADV_JUDGE verdict cannot be confirmed until a 3-repeat run is completed.
 
 ---
 
@@ -109,35 +125,38 @@ the divergence scale is approximately linear across these three conditions.
 
 C7 and C4 appear to be the strongest real-failure detectors so far.
 
-| Constraint                   | Mean (real_failure) | Mean (stable real) | Delta  |
-|------------------------------|---------------------|--------------------|--------|
-| C7 Uncertainty Acknowledgment | 0.5833             | 0.9667             | −0.3834|
-| C4 Epistemic Calibration      | 0.7333             | 1.0000             | −0.2667|
-| C6 Safety Integrity           | 0.9000             | 1.0000             | −0.1000|
-| C9 Evidence Traceability      | 0.9000             | 0.9333             | −0.0333|
-| C3 Causal Integrity           | 0.9167             | 1.0000             | −0.1667|
+| Constraint                    | Mean (real_failure 3-rep) | Mean (stable real) | Delta   |
+|-------------------------------|---------------------------|--------------------|---------|
+| C7 Uncertainty Acknowledgment | 0.6556                    | 0.9667             | −0.3111 |
+| C4 Epistemic Calibration      | 0.7833                    | 1.0000             | −0.2167 |
+| C6 Safety Integrity           | 0.9389                    | 1.0000             | −0.0611 |
+| C3 Causal Integrity           | 0.9444                    | 1.0000             | −0.0556 |
+| C9 Evidence Traceability      | 0.8889                    | 0.9333             | −0.0444 |
 
 Lower constraint mean indicates more violations. C7 and C4 drop sharply between the
 stable and pressured real conditions — consistent with the structural pressure types
 in that dataset (forced_certainty, overgeneralization, quantitative_trap).
 
-Exact attribution remains weak (48% match rate on pressured real), but the constraint
-activation pattern is informative: the failures surface in the epistemically sensitive
-constraints, not in factual or logical checking constraints.
+Exact attribution remains weak (44% match rate on pressured real 3-repeat), but the
+constraint activation pattern is informative: the failures surface in the epistemically
+sensitive constraints, not in factual or logical checking constraints.
 
 ---
 
 ## Current Scientific Status
 
-AOSL has passed an initial ordered-separation test. It has not yet passed a
+AOSL has now passed an initial 3-repeat ordered-separation test for the real-failure
+validation set. The elevated divergence signal remained above the stable-real baseline,
+although exact constraint attribution remains weak. It has not yet passed a full
 replication, independence, or production-readiness test.
 
 ---
 
 ## Next Required Experiments
 
-1. Run real_failure_validation_30 with 3 repeats. Confirms whether the 0.1067 mean D
-   is stable or a single-pass artifact.
+1. ~~Run real_failure_validation_30 with 3 repeats.~~ **COMPLETED.** Mean D=0.0939,
+   avg prompt std dev=0.0281, verdict KEEP_BUT_RECALIBRATE. Signal held above stable-real
+   baseline across all three repeat passes.
 
 2. Run validation_30 with 3 repeats. Measures prompt-level standard deviation and
    validates the KEEP_ADV_JUDGE verdict under repeated scoring.
@@ -157,4 +176,5 @@ replication, independence, or production-readiness test.
 Version : v0.1
 Status  : early empirical validation — not final proof
 Scope   : three datasets, one judge, one generator model
+Updated : 2026-04-30 — real_failure_validation_30 updated to 3-repeat baseline
 ```
