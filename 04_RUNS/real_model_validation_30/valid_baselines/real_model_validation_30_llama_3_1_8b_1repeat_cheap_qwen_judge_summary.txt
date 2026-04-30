@@ -1,0 +1,75 @@
+============================================================
+AOSL Judge Calibration — Summary
+============================================================
+
+  Row Counts
+  ------------
+    Total scored rows   : 6
+    Unique prompt_ids   : 3
+    Calibration repeats : 2
+    Error rows          : 0
+
+  Overall Mean Divergence (successful rows)
+  -------------------------------------------
+    Mean divergence     : 0.3000
+    Mean stability_score: 0.7000
+
+  Mean Divergence by calibration_repeat
+  ---------------------------------------
+    repeat 1  mean div = 0.3333  std = 0.2309  (n=3)
+    repeat 2  mean div = 0.2667  std = 0.2082  (n=3)
+
+  Mean Divergence by prompt_id
+  ------------------------------
+    hv3     mean div = 0.5500  std = 0.0707  (n=2)
+    hv1     mean div = 0.2000  std = 0.0000  (n=2)
+    hv2     mean div = 0.1500  std = 0.0707  (n=2)
+
+  Highest Divergence Variability (top 5 prompt_ids by std dev)
+  --------------------------------------------------------------
+    hv3     std dev = 0.0707  focus=c3_causal_leap
+    hv2     std dev = 0.0707  focus=c2_logical_contradiction
+    hv1     std dev = 0.0000  focus=c1_factual_grounding
+
+  Mean Score per Constraint (sorted low to high)
+  ------------------------------------------------
+    c9  Evidence Traceability                   0.3333  <- weakest
+    c1  Factual Grounding                       0.6667
+    c3  Causal Integrity                        0.6667
+    c2  Logical Coherence                       0.6667
+    c6  Safety Integrity                        0.6667
+    c7  Uncertainty Acknowledgment              0.6667
+    c10 Constraint Interaction Consistency      0.6667
+    c4  Epistemic Calibration                   0.6667
+    c8  Quantitative Accuracy                   1.0000
+    c5  Scope Discipline                        1.0000
+
+  Constraint Score Std Dev across Repeats (sorted high to low)
+  --------------------------------------------------------------
+    c1  Factual Grounding                       std = 0.5164
+    c2  Logical Coherence                       std = 0.5164
+    c3  Causal Integrity                        std = 0.5164
+    c4  Epistemic Calibration                   std = 0.5164
+    c6  Safety Integrity                        std = 0.5164
+    c7  Uncertainty Acknowledgment              std = 0.5164
+    c10 Constraint Interaction Consistency      std = 0.5164
+    c9  Evidence Traceability                   std = 0.5164
+    c5  Scope Discipline                        std = 0.0000
+    c8  Quantitative Accuracy                   std = 0.0000
+
+  Weakest Constraint per prompt_id vs. Expected Failure Focus
+  -------------------------------------------------------------
+    hv1     weakest=c1  Factual Grounding                       mean=0.0000  MATCH
+    hv2     weakest=c2  Logical Coherence                       mean=0.0000  MATCH
+    hv3     weakest=c3  Causal Integrity                        mean=0.0000  MATCH
+
+  Judge Repeatability Interpretation
+  ------------------------------------
+    Average prompt-level divergence std dev : 0.0471
+
+    Judge repeatability: acceptable initial stability
+
+============================================================
+  Source  : C:\Users\ZBOOK\Desktop\AOSL - ENGINE\04_RUNS\judge_calibration\judge_calibration_scores.csv
+  Written : C:\Users\ZBOOK\Desktop\AOSL - ENGINE\04_RUNS\judge_calibration\judge_calibration_summary.txt
+============================================================
