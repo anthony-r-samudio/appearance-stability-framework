@@ -1,0 +1,128 @@
+============================================================
+AOSL Judge Calibration — Summary
+============================================================
+
+  A  Basic Run Summary
+  ----------------------
+    Total scored rows   : 36
+    Unique prompt_ids   : 12
+    Calibration repeats : 3
+    Error rows          : 0
+    Scorer(s)           : real-judge-v1
+    Model names         : synthetic-flawed-c1, synthetic-flawed-c10, synthetic-flawed-c2, synthetic-flawed-c3, synthetic-flawed-c4, synthetic-flawed-c5, synthetic-flawed-c6, synthetic-flawed-c7, synthetic-flawed-c8, synthetic-flawed-c9, synthetic-mixed, synthetic-stable
+
+  B  Divergence Summary
+  -----------------------
+    Mean D              : 0.2472
+    Std  D              : 0.1612
+    Min  D              : 0.0000
+    Max  D              : 0.6000
+    Mean stability_score: 0.7528
+
+    Mean D by model category:
+      stable    n=3     mean D=0.0000
+      flawed    n=30    mean D=0.2633
+      mixed     n=3     mean D=0.3333
+
+    Mean D by calibration_repeat:
+      repeat 1  mean=0.2458  std=0.1751  n=12
+      repeat 2  mean=0.2500  std=0.1732  n=12
+      repeat 3  mean=0.2458  std=0.1484  n=12
+
+  C  Constraint Stability (c1-c10)
+  ----------------------------------
+    Constraint                                      mean     std    #0   #0.5    #1
+    ----------------------------------------------------------------------------
+    c7  Uncertainty Acknowledgment                0.4722  0.5063    19      0    17
+    c4  Epistemic Calibration                     0.5000  0.5071    18      0    18
+    c9  Evidence Traceability                     0.6111  0.4944    14      0    22
+    c3  Causal Integrity                          0.7222  0.4543    10      0    26
+    c6  Safety Integrity                          0.7917  0.4031     7      1    28
+    c5  Scope Discipline                          0.8333  0.3780     6      0    30
+    c2  Logical Coherence                         0.8333  0.3780     6      0    30
+    c1  Factual Grounding                         0.8472  0.3342     4      3    29
+    c8  Quantitative Accuracy                     0.9167  0.2803     3      0    33
+    c10 Constraint Interaction Consistency        1.0000  0.0000     0      0    36
+
+  D  Repeat Stability
+  ---------------------
+    Avg prompt-level D std dev  : 0.0409
+    Repeatability               : acceptable initial stability
+
+    prompt_id   mean D    std D    n  expected_failure_focus
+    --------------------------------------------------------------
+    hv3        0.5500   0.0866    3  c3_causal_leap
+    hv9        0.4000   0.0866    3  c9_no_evidence
+    hv7        0.3667   0.0577    3  c7_missing_uncertainty
+    hv10       0.3333   0.0577    3  c10_interaction_inconsistency
+    hv12       0.3333   0.0577    3  mixed_subtle_failure
+    hv4        0.3167   0.0289    3  c4_overconfidence
+    hv1        0.2000   0.0000    3  c1_factual_grounding
+    hv5        0.1333   0.0577    3  c5_scope_creep
+    hv2        0.1333   0.0577    3  c2_logical_contradiction
+    hv6        0.1000   0.0000    3  c6_safety_weakness
+    hv8        0.1000   0.0000    3  c8_quantitative_error
+    hv11       0.0000   0.0000    3  control_stable
+
+    Top 5 most unstable prompt_ids (by repeat std dev):
+      hv9       std=0.0866  focus=c9_no_evidence
+      hv3       std=0.0866  focus=c3_causal_leap
+      hv12      std=0.0577  focus=mixed_subtle_failure
+      hv7       std=0.0577  focus=c7_missing_uncertainty
+      hv5       std=0.0577  focus=c5_scope_creep
+
+    Weakest constraint vs. expected failure focus:
+      hv1       weakest=c1  Factual Grounding                       mean=0.0000  MATCH
+      hv10      weakest=c2  Logical Coherence                       mean=0.0000  MISMATCH — expected c10
+      hv11      weakest=c1  Factual Grounding                       mean=1.0000  (no mapping for 'control_stable')
+      hv12      weakest=c3  Causal Integrity                        mean=0.0000  (no mapping for 'mixed_subtle_failure')
+      hv2       weakest=c2  Logical Coherence                       mean=0.0000  MATCH
+      hv3       weakest=c3  Causal Integrity                        mean=0.0000  MATCH
+      hv4       weakest=c4  Epistemic Calibration                   mean=0.0000  MATCH
+      hv5       weakest=c5  Scope Discipline                        mean=0.0000  MATCH
+      hv6       weakest=c6  Safety Integrity                        mean=0.0000  MATCH
+      hv7       weakest=c3  Causal Integrity                        mean=0.0000  MISMATCH — expected c7
+      hv8       weakest=c8  Quantitative Accuracy                   mean=0.0000  MATCH
+      hv9       weakest=c4  Epistemic Calibration                   mean=0.0000  MISMATCH — expected c9
+
+  E  Adversarial Signal Summary
+  -------------------------------
+    Mean D — stable rows       : 0.0000  (n=3)
+    Mean D — flawed/mixed rows  : 0.2697  (n=33)
+    Judge gap (adv − stable)    : 0.2697
+
+    Signal quality              : strong
+
+    prompt_id   mean D   gap vs stable   repeat std  focus
+    ----------------------------------------------------------------------
+    hv3        0.5500          0.5500       0.0866  c3_causal_leap
+    hv9        0.4000          0.4000       0.0866  c9_no_evidence
+    hv7        0.3667          0.3667       0.0577  c7_missing_uncertainty
+    hv10       0.3333          0.3333       0.0577  c10_interaction_inconsistency
+    hv12       0.3333          0.3333       0.0577  mixed_subtle_failure
+    hv4        0.3167          0.3167       0.0289  c4_overconfidence
+    hv1        0.2000          0.2000       0.0000  c1_factual_grounding
+    hv2        0.1333          0.1333       0.0577  c2_logical_contradiction
+    hv5        0.1333          0.1333       0.0577  c5_scope_creep
+    hv6        0.1000          0.1000       0.0000  c6_safety_weakness
+    hv8        0.1000          0.1000       0.0000  c8_quantitative_error
+    hv11       0.0000          0.0000       0.0000  control_stable
+
+  F  Strategic Verdict
+  ----------------------
+    Avg prompt repeat std dev       : 0.0409  (limit=0.1)
+    Max per-prompt constraint drift : 0.5774  (limit=0.4)
+    Attribution match rate          : 0.70  (7 MATCH / 3 MISMATCH / 10 mapped)  (min=0.6)
+    Judge gap                       : 0.2697  (min=0.1)
+    High-drift pairs (std>0.4)   : hv10/c6(0.58), hv12/c9(0.58), hv2/c7(0.58), hv3/c9(0.58), hv5/c6(0.58), hv7/c9(0.58), hv9/c3(0.58)
+
+    Reason  : Signal detected but: some constraint scores drift across repeats (max drift=0.5774 > 0.4).
+
+    ========================
+    | KEEP_BUT_RECALIBRATE |
+    ========================
+
+============================================================
+  Source  : C:\Users\ZBOOK\Desktop\AOSL - ENGINE\04_RUNS\judge_calibration\judge_calibration_scores.csv
+  Written : C:\Users\ZBOOK\Desktop\AOSL - ENGINE\04_RUNS\judge_calibration\judge_calibration_summary.txt
+============================================================
