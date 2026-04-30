@@ -77,13 +77,8 @@ A 30-row set with at least 2 examples per constraint and 10 domain categories pr
 Before spending any credits, preview the prompt sizes and total token budget:
 
 ```
-py 05_SRC\experiments\run_judge_calibration.py --dry-run --cost-mode cheap
+py 05_SRC\experiments\run_judge_calibration.py --dry-run --cost-mode cheap --input-csv 04_RUNS\validation_30\validation_30_inputs.csv
 ```
-
-Note: the runner currently reads from `04_RUNS/hard_validation/hard_validation_inputs.csv`.
-Until a `--input-csv` argument is added to the runner, copy or symlink
-`validation_30_inputs.csv` to that path, or update `INPUT_CSV` in the runner script,
-before using these commands against this dataset.
 
 ---
 
@@ -92,7 +87,7 @@ before using these commands against this dataset.
 Run a single pass over all 30 rows at the cheap token preset (300 max response tokens):
 
 ```
-py 05_SRC\experiments\run_judge_calibration.py --cost-mode cheap --limit 30 --repeats 1
+py 05_SRC\experiments\run_judge_calibration.py --cost-mode cheap --repeats 1 --input-csv 04_RUNS\validation_30\validation_30_inputs.csv
 ```
 
 This produces one scored row per prompt. Use it to confirm the judge can score all 30
@@ -106,7 +101,7 @@ to a full 3-repeat run.
 Run three full passes at the standard token preset to measure repeat stability:
 
 ```
-py 05_SRC\experiments\run_judge_calibration.py --cost-mode standard --limit 30 --repeats 3
+py 05_SRC\experiments\run_judge_calibration.py --cost-mode standard --repeats 3 --input-csv 04_RUNS\validation_30\validation_30_inputs.csv
 ```
 
 This produces 90 scored rows total. The summary script will compute per-prompt divergence
@@ -115,7 +110,7 @@ std dev, judge gap, attribution match rate, and the strategic verdict.
 To resume after an interruption:
 
 ```
-py 05_SRC\experiments\run_judge_calibration.py --cost-mode standard --limit 30 --repeats 3 --resume
+py 05_SRC\experiments\run_judge_calibration.py --cost-mode standard --repeats 3 --resume --input-csv 04_RUNS\validation_30\validation_30_inputs.csv
 ```
 
 ---

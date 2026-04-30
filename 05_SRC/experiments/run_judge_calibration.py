@@ -4,7 +4,8 @@ run_judge_calibration.py
 Scores the hard validation dataset multiple times with the same judge model
 to measure judge repeatability across C1-C10 constraints.
 
-Input  : 04_RUNS/hard_validation/hard_validation_inputs.csv
+Input  : 04_RUNS/hard_validation/hard_validation_inputs.csv  (default)
+         Override with --input-csv PATH
 Outputs: 04_RUNS/judge_calibration/judge_calibration_scores.csv
          04_RUNS/judge_calibration/judge_calibration_scores.jsonl
 
@@ -60,7 +61,7 @@ from scoring.fast_batch_scorer import (
 
 # -- Paths ---------------------------------------------------------------------
 
-INPUT_CSV              = _REPO_ROOT / "04_RUNS" / "hard_validation" / "hard_validation_inputs.csv"
+_DEFAULT_INPUT_CSV     = _REPO_ROOT / "04_RUNS" / "hard_validation" / "hard_validation_inputs.csv"
 OUT_DIR                = _REPO_ROOT / "04_RUNS" / "judge_calibration"
 CSV_PATH               = OUT_DIR / "judge_calibration_scores.csv"
 JSONL_PATH             = OUT_DIR / "judge_calibration_scores.jsonl"
@@ -200,7 +201,17 @@ def main(
     dry_run:             bool         = False,
     no_boundary_notes:   bool         = False,
     resume:              bool         = False,
+    input_csv:           "Path | None" = None,
 ) -> None:
+
+    # -- Resolve input_csv: explicit arg > module default ---------------------
+    if input_csv is None:
+        input_csv = _DEFAULT_INPUT_CSV
+    else:
+        input_csv = Path(input_csv)
+        if not input_csv.is_absolute():
+            input_csv = _REPO_ROOT / input_csv
+    input_csv = input_csv.resolve()
 
     # -- Resolve max_tokens: explicit flag > cost_mode preset -----------------
     if max_tokens is None:
@@ -217,7 +228,7 @@ def main(
 
     print("=" * 60)
     print("AOSL Judge Calibration Runner")
-    print(f"  input          : {INPUT_CSV}")
+    print(f"  input          : {input_csv}")
     print(f"  judge          : {judge_model}")
     print(f"  repeats        : {repeats}")
     print(f"  limit          : {limit if limit is not None else 'none'}")
@@ -250,12 +261,12 @@ def main(
             print(f"ERROR: {exc}")
             sys.exit(1)
 
-    if not INPUT_CSV.exists():
-        print(f"ERROR: Input file not found: {INPUT_CSV}")
+    if not input_csv.exists():
+        print(f"ERROR: Input file not found: {input_csv}")
         sys.exit(1)
 
     # -- Load and slice rows ---------------------------------------------------
-    rows = load_input(INPUT_CSV)
+    rows = load_input(input_csv)
     total_loaded = len(rows)
 
     if limit is not None and limit < len(rows):
@@ -454,6 +465,16 @@ if __name__ == "__main__":
         description="Score the hard validation dataset multiple times to measure judge repeatability."
     )
     parser.add_argument(
+        "--input-csv",
+        default=None,
+        metavar="PATH",
+        dest="input_csv",
+        help=(
+            "Path to the input CSV to score. Relative paths are resolved from the repo root. "
+            f"Default: {_DEFAULT_INPUT_CSV.relative_to(_REPO_ROOT)}"
+        ),
+    )
+    parser.add_argument(
         "--repeats",
         type=int,
         default=3,
@@ -557,4 +578,5 @@ if __name__ == "__main__":
         dry_run             = args.dry_run,
         no_boundary_notes   = args.no_boundary_notes,
         resume              = args.resume,
+        input_csv           = args.input_csv,
     )
