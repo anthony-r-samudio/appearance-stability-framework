@@ -34,10 +34,11 @@ require the model to actively resist in order to answer correctly.
 
 ## Files
 
-| File                                       | Description                                       |
-|--------------------------------------------|---------------------------------------------------|
-| `real_failure_validation_30_prompts.csv`   | 30 high-pressure prompts with pressure_type column|
-| `real_failure_validation_30_outputs.csv`   | Generated outputs in judge-compatible schema      |
+| File                                                  | Description                                       |
+|-------------------------------------------------------|---------------------------------------------------|
+| `real_failure_validation_30_prompts.csv`              | 30 high-pressure prompts with pressure_type column|
+| `real_failure_validation_30_outputs.csv`              | DeepSeek outputs (default, judge-compatible)      |
+| `real_failure_validation_30_outputs_<suffix>.csv`     | Per-model outputs when --output-suffix is used    |
 
 ### Prompts CSV Schema
 
@@ -97,6 +98,32 @@ py 05_SRC\experiments\generate_real_failure_validation_30.py --resume
 
 ---
 
+## Generate with a Different Model (Separate Output File)
+
+Use `--output-suffix` to write results to a model-specific file without overwriting
+the existing DeepSeek outputs.
+
+```
+py 05_SRC\experiments\generate_real_failure_validation_30.py ^
+    --model meta-llama/llama-3.1-8b-instruct ^
+    --output-suffix llama_3_1_8b
+```
+
+Output: `real_failure_validation_30_outputs_llama_3_1_8b.csv`
+
+The suffix is sanitized automatically: `/`, `\`, `:`, and spaces become `_`, lowercased.
+
+Resume with suffix:
+
+```
+py 05_SRC\experiments\generate_real_failure_validation_30.py ^
+    --model meta-llama/llama-3.1-8b-instruct ^
+    --output-suffix llama_3_1_8b ^
+    --resume
+```
+
+---
+
 ## Score the Outputs (Dry-Run First)
 
 ```
@@ -125,10 +152,10 @@ this set should be meaningfully above the stable real baseline (0.0117).
 | validation_30 (synthetic)        | 0.2050  | Hand-crafted, legible failures        |
 | real_model_validation_30         | 0.0117  | Stable real outputs, nearly zero D    |
 | real_model_validation_30_adv     | ~0.0100 | Weak prefix, model resisted pressure  |
-| real_failure_validation_30       | TBD     | High-pressure structural prompts      |
+| real_failure_validation_30       | 0.0939  | High-pressure structural prompts (3-repeat) |
 
-A mean D above 0.05 would constitute initial evidence of real-model failure detection.
-A mean D above 0.10 would be strong evidence.
+Mean D of 0.0939 (3-repeat) is 8.0× the stable real baseline. See closeout report in
+`07_DOCS/AOSL_REAL_FAILURE_VALIDATION_CLOSEOUT_v0.1.md`.
 
 ---
 
@@ -137,7 +164,7 @@ A mean D above 0.10 would be strong evidence.
 ```
 Created  : 2026-04-30
 Prompts  : 30 (structurally redesigned from validation_30)
-Generator: deepseek/deepseek-chat
+Generator: deepseek/deepseek-chat (default)
 Temp     : 0.9
-Status   : outputs not yet generated
+Status   : DeepSeek outputs generated and scored (3-repeat, mean D=0.0939)
 ```

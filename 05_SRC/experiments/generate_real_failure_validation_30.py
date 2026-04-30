@@ -10,6 +10,7 @@ The output CSV is directly compatible with run_judge_calibration.py --input-csv.
 
 Input  : 04_RUNS/real_failure_validation_30/real_failure_validation_30_prompts.csv
 Output : 04_RUNS/real_failure_validation_30/real_failure_validation_30_outputs.csv
+         (or real_failure_validation_30_outputs_<suffix>.csv if --output-suffix given)
 
 Prompt file schema  : prompt_id, original_prompt_id, prompt_text,
                       expected_failure_focus, pressure_type
@@ -30,6 +31,11 @@ Generate all 30 rows:
 Resume after interruption:
     py 05_SRC/experiments/generate_real_failure_validation_30.py --resume
 
+Generate with a second model (separate output file):
+    py 05_SRC/experiments/generate_real_failure_validation_30.py \\
+        --model meta-llama/llama-3.1-8b-instruct \\
+        --output-suffix llama_3_1_8b
+
 Score the outputs:
     py 05_SRC/experiments/run_judge_calibration.py \\
         --input-csv 04_RUNS/real_failure_validation_30/real_failure_validation_30_outputs.csv \\
@@ -39,6 +45,7 @@ Score the outputs:
 import argparse
 import csv
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -57,7 +64,7 @@ _PROMPTS_CSV = (
     _REPO_ROOT / "04_RUNS" / "real_failure_validation_30"
     / "real_failure_validation_30_prompts.csv"
 )
-_OUTPUT_CSV  = (
+_DEFAULT_OUTPUT_CSV = (
     _REPO_ROOT / "04_RUNS" / "real_failure_validation_30"
     / "real_failure_validation_30_outputs.csv"
 )
@@ -84,6 +91,24 @@ _OUTPUT_FIELDS = [
 
 # -- Helpers -------------------------------------------------------------------
 
+def _sanitize_suffix(suffix: str) -> str:
+    """Make suffix safe for Windows filenames: lowercase, replace separators."""
+    s = suffix.lower()
+    s = re.sub(r'[/\\: ]+', '_', s)
+    return s
+
+
+def _resolve_output_csv(output_suffix: "str | None") -> Path:
+    """Return the output CSV path, incorporating suffix if provided."""
+    if not output_suffix:
+        return _DEFAULT_OUTPUT_CSV
+    safe = _sanitize_suffix(output_suffix)
+    return (
+        _REPO_ROOT / "04_RUNS" / "real_failure_validation_30"
+        / f"real_failure_validation_30_outputs_{safe}.csv"
+    )
+
+
 def _check_api_key() -> None:
     if not os.getenv("OPENROUTER_API_KEY"):
         raise EnvironmentError(
@@ -102,11 +127,11 @@ def _load_prompts() -> list:
         return list(csv.DictReader(f))
 
 
-def _load_existing_outputs() -> list:
-    if not _OUTPUT_CSV.exists():
+def _load_existing_outputs(path: Path) -> list:
+    if not path.exists():
         return []
     try:
-        with open(_OUTPUT_CSV, newline="", encoding="utf-8") as f:
+        with open(path, newline="", encoding="utf-8") as f:
             return list(csv.DictReader(f))
     except Exception as exc:
         print(f"  [resume] WARNING: could not read existing outputs: {exc}")
@@ -144,12 +169,15 @@ def main(
     chunk_size:    "int | None" = None,
     resume:        bool         = False,
     dry_run:       bool         = False,
+    output_suffix: "str | None" = None,
 ) -> None:
+
+    output_csv = _resolve_output_csv(output_suffix)
 
     print("=" * 60)
     print("AOSL Real Failure Validation 30 — Generator")
     print(f"  prompts        : {_PROMPTS_CSV}")
-    print(f"  output         : {_OUTPUT_CSV}")
+    print(f"  output         : {output_csv}")
     print(f"  model          : {model}")
     print(f"  temperature    : {temperature}")
     print(f"  max_tokens     : {max_tokens}")
@@ -159,6 +187,7 @@ def main(
     print(f"  chunk_size     : {chunk_size if chunk_size is not None else 'none (all)'}")
     print(f"  resume         : {'yes' if resume else 'no'}")
     print(f"  dry run        : {'yes (no API calls, no file writes)' if dry_run else 'no'}")
+    print(f"  output_suffix  : {output_suffix if output_suffix else '(none — default file)'}")
     print(f"  pressure mode  : structural (false_premise, causal_overclaim, quantitative_trap, etc.)")
     print("=" * 60)
     print()
@@ -197,7 +226,7 @@ def main(
     existing_rows = []
     already_done  = set()
     if resume:
-        existing_rows = _load_existing_outputs()
+        existing_rows = _load_existing_outputs(output_csv)
         already_done  = _build_done_set(existing_rows)
         print(f"  [resume] Existing successful outputs: {len(already_done)}")
 
@@ -229,6 +258,7 @@ def main(
         print(f"  model                : {model}")
         print(f"  temperature          : {temperature}")
         print(f"  max_tokens           : {max_tokens}")
+        print(f"  output file          : {output_csv}")
         print()
         if resume and live_calls == 0:
             print("Resume dry-run: all selected prompts are already successfully generated. No live calls needed.")
@@ -305,17 +335,17 @@ def main(
         return
 
     print(f"Saving {len(all_rows)} total row(s) ({len(new_rows)} new) to:")
-    print(f"  {_OUTPUT_CSV}")
-    _save_csv(all_rows, _OUTPUT_CSV)
+    print(f"  {output_csv}")
+    _save_csv(all_rows, output_csv)
 
     print()
     print("=" * 60)
     print("Done. Score with:")
+    rel_out = output_csv.relative_to(_REPO_ROOT)
     print(
-        "  py 05_SRC/experiments/run_judge_calibration.py \\\n"
-        "      --input-csv 04_RUNS/real_failure_validation_30"
-        "/real_failure_validation_30_outputs.csv \\\n"
-        "      --dry-run"
+        f"  py 05_SRC/experiments/run_judge_calibration.py \\\n"
+        f"      --input-csv {rel_out.as_posix()} \\\n"
+        f"      --dry-run"
     )
     print("=" * 60)
 
@@ -390,15 +420,28 @@ if __name__ == "__main__":
         default=False,
         help="Print generation plan without making any API calls or writing output.",
     )
+    parser.add_argument(
+        "--output-suffix",
+        default=None,
+        metavar="SUFFIX",
+        dest="output_suffix",
+        help=(
+            "Append a suffix to the output filename. "
+            "Writes to real_failure_validation_30_outputs_<suffix>.csv. "
+            "Useful for running different generator models without overwriting existing outputs. "
+            "Characters / \\ : and spaces are replaced with underscores and lowercased."
+        ),
+    )
     args = parser.parse_args()
     main(
-        model       = args.model,
-        temperature = args.temperature,
-        max_tokens  = args.max_tokens,
-        repeat      = args.repeat,
-        limit       = args.limit,
-        start_index = args.start_index,
-        chunk_size  = args.chunk_size,
-        resume      = args.resume,
-        dry_run     = args.dry_run,
+        model         = args.model,
+        temperature   = args.temperature,
+        max_tokens    = args.max_tokens,
+        repeat        = args.repeat,
+        limit         = args.limit,
+        start_index   = args.start_index,
+        chunk_size    = args.chunk_size,
+        resume        = args.resume,
+        dry_run       = args.dry_run,
+        output_suffix = args.output_suffix,
     )
