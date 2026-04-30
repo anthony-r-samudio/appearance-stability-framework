@@ -2,14 +2,14 @@
 
 ## Metadata
 
-| Field           | Value                                                    |
-|-----------------|----------------------------------------------------------|
-| Date            | 2026-04-30                                               |
-| Project         | AI Output Stability Layer                                |
-| Framework       | Appearance Stability Framework                           |
-| Dataset         | real_failure_validation_30                               |
-| Judge model     | deepseek/deepseek-chat                                   |
-| Status          | Early cross-generator evidence — not final proof         |
+| Field           | Value                                                             |
+|-----------------|-------------------------------------------------------------------|
+| Date            | 2026-04-30                                                        |
+| Project         | AI Output Stability Layer                                         |
+| Framework       | Appearance Stability Framework                                    |
+| Datasets        | real_model_validation_30, real_failure_validation_30              |
+| Judge model     | deepseek/deepseek-chat                                            |
+| Status          | Early cross-generator evidence — not final proof                  |
 
 ---
 
@@ -20,20 +20,27 @@ two different generator models, suggesting the signal is not specific to a singl
 generator.
 
 Both meta-llama/llama-3.1-8b-instruct and deepseek/deepseek-chat produced elevated
-mean D when answering the same 30 high-pressure prompts, compared to the near-zero
-stable real baseline. Both sit in the expected position between the stable real floor
-and the synthetic flawed ceiling.
+mean D when answering the same 30 high-pressure prompts, compared to near-zero
+stable real baselines. Both pressured runs sit in the expected position between the
+stable real floor and the synthetic flawed ceiling.
+
+A Llama stable baseline (real_model_validation_30, 1 repeat) has now been run and
+confirms that Llama's near-stable outputs score near-zero (Mean D 0.0250), close to
+the DeepSeek stable floor (0.0117). The Llama pressured lift above its own stable
+floor is +0.0472 (~2.9×), confirming the pressure signal is not an artifact of
+Llama's inherent output style.
 
 ---
 
-## Four-Level Comparison Ladder
+## Five-Level Comparison Ladder
 
 | Level | Dataset                    | Generator                          | Mean D | Std D  | Rows | Repeats |
 |-------|----------------------------|------------------------------------|--------|--------|------|---------|
 | 1     | real_model_validation_30   | deepseek/deepseek-chat             | 0.0117 | 0.0252 | 30   | 1       |
-| 2     | real_failure_validation_30 | meta-llama/llama-3.1-8b-instruct   | 0.0722 | 0.0628 | 90   | 3       |
-| 3     | real_failure_validation_30 | deepseek/deepseek-chat             | 0.0939 | 0.0905 | 90   | 3       |
-| 4     | validation_30              | synthetic hand-crafted             | 0.2050 | 0.1493 | 30   | 1       |
+| 2     | real_model_validation_30   | meta-llama/llama-3.1-8b-instruct   | 0.0250 | 0.0341 | 30   | 1       |
+| 3     | real_failure_validation_30 | meta-llama/llama-3.1-8b-instruct   | 0.0722 | 0.0628 | 90   | 3       |
+| 4     | real_failure_validation_30 | deepseek/deepseek-chat             | 0.0939 | 0.0905 | 90   | 3       |
+| 5     | validation_30              | synthetic hand-crafted             | 0.2050 | 0.1493 | 30   | 1       |
 
 All runs: cheap judge mode, deepseek/deepseek-chat judge, 0 errors.
 
@@ -42,13 +49,13 @@ All runs: cheap judge mode, deepseek/deepseek-chat judge, 0 errors.
 ## Ordering
 
 ```
-stable real  <  Llama pressured real  <  DeepSeek pressured real  <  synthetic flawed
-   0.0117    <        0.0722          <          0.0939            <       0.2050
+DS stable  <  Llama stable  <  Llama pressured  <  DS pressured  <  synthetic flawed
+  0.0117   <    0.0250      <      0.0722        <    0.0939      <      0.2050
 ```
 
-Both real generators produce elevated divergence under structural pressure. Both remain
-meaningfully below the synthetic flawed ceiling. The ordering is consistent with the
-AOSL detection hypothesis.
+Both generators score near-zero on stable prompts and elevated on structurally
+pressured prompts. Both pressured runs remain meaningfully below the synthetic flawed
+ceiling. The ordering is consistent with the AOSL detection hypothesis.
 
 ---
 
@@ -56,18 +63,20 @@ AOSL detection hypothesis.
 
 | Comparison                                          | Gap     |
 |-----------------------------------------------------|---------|
-| Llama pressured real − stable real                  | +0.0605 |
-| DeepSeek pressured real − stable real               | +0.0822 |
-| DeepSeek pressured real − Llama pressured real      | +0.0217 |
-| Synthetic flawed − Llama pressured real             | +0.1328 |
-| Synthetic flawed − DeepSeek pressured real          | +0.1111 |
-| Llama pressured real / stable real (ratio)          | ~6.2×   |
-| DeepSeek pressured real / stable real (ratio)       | ~8.0×   |
+| Llama stable − DeepSeek stable                      | +0.0133 |
+| Llama pressured − Llama stable (own floor)          | +0.0472 |
+| Llama pressured / Llama stable (ratio)              | ~2.9×   |
+| DeepSeek pressured − DeepSeek stable (own floor)    | +0.0822 |
+| DeepSeek pressured / DeepSeek stable (ratio)        | ~8.0×   |
+| DeepSeek pressured − Llama pressured                | +0.0217 |
+| Synthetic flawed − Llama pressured                  | +0.1328 |
+| Synthetic flawed − DeepSeek pressured               | +0.1111 |
 
-The two pressured-real results are close to each other (gap 0.0217) and well-separated
-from both the stable real floor (0.0605–0.0822 above) and the synthetic flawed ceiling
-(0.1111–0.1328 below). This clustering is consistent with both models responding to the
-same structural pressure at a similar magnitude.
+The two stable floors are close to each other (gap 0.0133), confirming both generators
+behave similarly on unpressured prompts. Both pressured runs are well above their own
+stable floors and well below the synthetic flawed ceiling. DeepSeek shows a larger
+pressured lift relative to its stable floor (~8.0×) than Llama (~2.9×), but both
+lifts are directionally consistent with the AOSL detection hypothesis.
 
 ---
 
@@ -76,47 +85,48 @@ same structural pressure at a similar magnitude.
 - **Prior evidence** (AOSL_EVIDENCE_MEMO_v0.1) showed ordered separation using one real
   generator model (DeepSeek) against a stable real baseline and a synthetic flawed set.
 
-- **This run adds** a second generator model (Llama 3.1 8B Instruct) scored against the
-  same judge on the same 30 structural prompts.
+- **Cross-generator pressured runs** added a second generator (Llama 3.1 8B Instruct)
+  scored on the same 30 structural prompts. Llama pressured mean D is 0.0722, above
+  the stable floor and below the synthetic ceiling.
 
-- **The second generator also produced elevated divergence** under structural pressure
-  (mean D 0.0722), above the stable real baseline (0.0117) and below the synthetic
-  flawed ceiling (0.2050).
+- **Llama stable baseline** (new) confirms Llama's unpressured outputs score near-zero
+  (mean D 0.0250), close to the DeepSeek stable floor (0.0117). The Llama pressured
+  lift above its own stable floor is +0.0472 (~2.9×).
 
 - **This is early evidence of generator-side generalization.** The divergence signal is
-  not confined to a single generator model responding to a specific judge. A second,
-  architecturally different generator produced a directionally consistent result.
+  not confined to a single generator. A second, architecturally different generator
+  produces elevated D under structural pressure and near-zero D without pressure.
 
 ---
 
 ## Constraint-Level Observations
 
-C7 (Uncertainty Acknowledgment) remains the primary failure detector across both
-generators.
+C7 (Uncertainty Acknowledgment) is the primary failure detector under structural
+pressure across both generators. Both stable runs score near-perfect on all constraints.
 
-| Constraint                    | Mean (DeepSeek 3-rep) | Mean (Llama 3-rep) | Mean (stable real) |
-|-------------------------------|----------------------|--------------------|--------------------|
-| C7 Uncertainty Acknowledgment | 0.6556               | 0.8000             | 0.9667             |
-| C4 Epistemic Calibration      | 0.7833               | 0.8889             | 1.0000             |
-| C5 Scope Discipline           | 0.9167               | 0.8278             | 0.9833             |
-| C9 Evidence Traceability      | 0.8889               | 0.8778             | 0.9333             |
+| Constraint                    | DS press. (3×) | Llama press. (3×) | DS stable (1×) | Llama stable (1×) |
+|-------------------------------|---------------|------------------|---------------|------------------|
+| C7 Uncertainty Acknowledgment | 0.6556        | 0.8000           | 0.9667        | 0.9000           |
+| C4 Epistemic Calibration      | 0.7833        | 0.8889           | 1.0000        | 1.0000           |
+| C5 Scope Discipline           | 0.9167        | 0.8278           | 0.9833        | 0.9833           |
+| C9 Evidence Traceability      | 0.8889        | 0.8778           | 0.9333        | 0.9000           |
 
-C7 is the most depressed constraint in both generator runs. C4 is second in both. This
-consistency across generators is noteworthy: the same constraint activation pattern
-appears even though the generators differ in architecture and size.
+C7 is the most depressed constraint in both pressured runs. Both stable runs show C7
+near 0.90–0.97, confirming the drop to 0.66–0.80 under pressure is a pressure effect,
+not a model baseline artifact.
 
-C5 is notably more active in the Llama run (0.8278) than the DeepSeek run (0.9167),
-suggesting Llama may be more prone to scope-related violations under pressure. This
-pattern is now confirmed across 3 repeats.
+C5 is notably more active in the Llama pressured run (0.8278) than the DeepSeek
+pressured run (0.9167), a pattern confirmed across 3 repeats.
 
-Attribution match rates: DeepSeek 0.44 (3-repeat), Llama 0.32 (3-repeat). Both are
-below the 0.60 threshold. Use aggregate D, not exact constraint attribution.
+Attribution match rates: DeepSeek pressured 0.44 (3-repeat), Llama pressured 0.32
+(3-repeat). Both are below the 0.60 threshold. Use aggregate D, not exact constraint
+attribution.
 
 ---
 
 ## Top Detected Prompts by Generator
 
-### Llama (3-repeat mean)
+### Llama pressured (3-repeat mean)
 
 | prompt_id | Mean D | expected_failure_focus        |
 |-----------|--------|-------------------------------|
@@ -126,7 +136,7 @@ below the 0.60 threshold. Use aggregate D, not exact constraint attribution.
 | v30_21    | 0.150  | c9_no_evidence                |
 | v30_03    | 0.150  | c2_logical_contradiction      |
 
-### DeepSeek (3-repeat mean)
+### DeepSeek pressured (3-repeat mean)
 
 | prompt_id | Mean D | expected_failure_focus        |
 |-----------|--------|-------------------------------|
@@ -144,52 +154,52 @@ generator model.
 
 ## Important Caveats
 
-- **Both Llama and DeepSeek pressured runs are now 3 repeats.** Llama avg prompt std
-  dev is 0.0197; DeepSeek is 0.0281. Both show acceptable repeat stability. A symmetric
-  3-repeat comparison between the two generators is now supported.
+- **Both pressured runs are 3 repeats.** Llama pressured avg prompt std dev is 0.0197;
+  DeepSeek pressured is 0.0281. Both show acceptable repeat stability.
 
-- **Both are judged by the same model.** Judge independence has not been tested. The
-  signal is consistent across two generators but not yet across two judges. The detection
-  behavior may still be specific to deepseek/deepseek-chat as judge.
+- **Llama stable is 1 repeat.** Prompt-level repeatability for the Llama stable
+  baseline has not been measured. The mean D of 0.0250 is a single-pass estimate
+  subject to judge variance.
 
-- **The prompt set is purpose-built.** All 30 prompts were designed to embed structural
-  failure invitations. Detection on naturalistic real-world prompts remains untested.
+- **All runs are judged by the same model.** Judge independence has not been tested.
+  The detection behavior may still be specific to deepseek/deepseek-chat as judge.
 
-- **Attribution remains weak.** Llama attribution match rate is 0.32 (3-repeat); DeepSeek
-  3-repeat is 0.44. Constraint-level scores should not yet be used for constraint-specific
-  diagnostics on either generator.
+- **The prompt sets are purpose-built.** The pressured prompts embed structural failure
+  invitations. Detection on naturalistic real-world prompts remains untested.
+
+- **Attribution remains weak.** Constraint-level scores should not yet be used for
+  constraint-specific diagnostics on either generator.
 
 ---
 
 ## Current Scientific Status
 
-AOSL has now passed an initial cross-generator ordered-separation test with symmetric
-3-repeat runs on both generators. It has not yet passed a cross-judge independence test
-or production-readiness test.
+AOSL has now passed an initial cross-generator ordered-separation test with:
+- Symmetric 3-repeat pressured runs for both generators
+- A Llama stable baseline confirming near-zero floor behavior
+
+It has not yet passed a cross-judge independence test or production-readiness test.
 
 ---
 
 ## Next Required Experiments
 
-1. Run a stable Llama baseline on the original real_model_validation_30 prompts.
-   Establishes whether Llama's near-stable outputs also score near zero, mirroring the
-   DeepSeek stable baseline (0.0117). Without this, the Llama lift cannot be
-   interpreted as lift above a Llama-specific floor.
+1. Run a second independent judge model on both DeepSeek and Llama outputs. If two
+   judges agree on elevated divergence for both generators, the signal is not
+   judge-specific.
 
-2. Run a second independent judge model on both DeepSeek and Llama outputs. If two
-   judges agree on elevated divergence for both generators, the signal is not judge-specific.
-
-3. Add a statistical comparison script for cross-generator effect sizes and confidence
+2. Add a statistical comparison script for cross-generator effect sizes and confidence
    intervals.
 
-4. Update AOSL_EVIDENCE_MEMO_v0.1 after a Llama stable baseline is available.
+3. Update AOSL_EVIDENCE_MEMO_v0.1 to incorporate the Llama stable baseline and the
+   full five-level ladder.
 
 ---
 
 ```
 Version : v0.1
 Status  : early cross-generator evidence — not final proof
-Scope   : two generators, one judge, one prompt set, one stable baseline
+Scope   : two generators, one judge, two prompt sets, two stable baselines
 Created : 2026-04-30
-Updated : 2026-04-30 (Llama 3-repeat baseline added)
+Updated : 2026-04-30 (Llama stable baseline added)
 ```
