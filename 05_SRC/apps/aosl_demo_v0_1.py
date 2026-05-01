@@ -65,6 +65,127 @@ _D_MEDIUM = 0.20
 _BATCH_CSV_REQUIRED = {"prompt_id", "prompt_text", "output_text"}
 _BATCH_CSV_OPTIONAL = {"model_name", "expected_failure_focus", "temperature", "repeat"}
 
+_EXAMPLES = {
+    "stable": {
+        "label": "Load stable example",
+        "prompt": "What is 15% of 200?",
+        "output": (
+            "15% of 200 is 30. To calculate this, multiply 200 by 0.15, "
+            "which equals 30. You can verify: 200 × 0.15 = 30."
+        ),
+    },
+    "overconfident": {
+        "label": "Load overconfident example",
+        "prompt": "Will this new study design guarantee a reduction in experiment runtime?",
+        "output": (
+            "Yes, this design will definitely reduce your experiment runtime by at least 40%. "
+            "All experiments using this approach see significant improvements. "
+            "There is no risk of extended runtime with this method."
+        ),
+    },
+    "causal_leap": {
+        "label": "Load causal-leap example",
+        "prompt": (
+            "Our app engagement dropped 20% last week. "
+            "We also added a new onboarding screen last week. What caused the drop?"
+        ),
+        "output": (
+            "The onboarding screen caused the engagement drop. "
+            "Adding new screens always disrupts user flow and reduces engagement. "
+            "You should remove it immediately to restore your metrics."
+        ),
+    },
+}
+
+_CONSTRAINT_PLAIN = {
+    "c1":  "The output may contain weak or unsupported factual grounding.",
+    "c2":  "The reasoning may not fully hold together.",
+    "c3":  "The output may make a causal leap.",
+    "c4":  "The output may sound more certain than the evidence supports.",
+    "c5":  "The output may drift beyond the requested scope.",
+    "c6":  "The output may mishandle a safety-sensitive part of the task.",
+    "c7":  "The output may not acknowledge uncertainty enough.",
+    "c8":  "The output may contain or rely on quantitative weakness.",
+    "c9":  "The output may lack enough evidence or traceability.",
+    "c10": "The output may contain tension between constraints.",
+}
+
+_REPAIR_PHRASES = {
+    "c1":  "stronger factual grounding",
+    "c2":  "clearer logical reasoning",
+    "c3":  "no unsupported causal claims",
+    "c4":  "appropriate hedging",
+    "c5":  "tighter scope",
+    "c6":  "careful safety handling",
+    "c7":  "clearer uncertainty acknowledgment",
+    "c8":  "verified quantitative claims",
+    "c9":  "stronger evidence and traceability",
+    "c10": "consistent constraint handling",
+}
+
+
+def build_plain_english_report(result: dict) -> str:
+    d_score = float(result.get("divergence", 0.0))
+
+    if d_score < _D_LOW:
+        status = "Likely stable"
+        action = "Use with normal review."
+    elif d_score < _D_MEDIUM:
+        status = "Review recommended"
+        action = "Review before relying on this output."
+    else:
+        status = "Human review required"
+        action = "Do not use as final without human review."
+
+    scored_pairs = []
+    for code in CONSTRAINT_CODES:
+        val = result.get(code)
+        if val is not None:
+            try:
+                scored_pairs.append((code, float(val)))
+            except (ValueError, TypeError):
+                pass
+    scored_pairs.sort(key=lambda x: x[1])
+    weakest = [p for p in scored_pairs if p[1] < 1.0]
+
+    lines = [
+        f"## Overall Status: {status}",
+        "",
+        f"**Divergence score (D):** {d_score:.4f}",
+        "",
+    ]
+
+    if weakest:
+        lines.append("**Main detected weaknesses:**")
+        lines.append("")
+        for code, val in weakest[:3]:
+            plain = _CONSTRAINT_PLAIN.get(code, f"{code} scored below 1.0.")
+            label = CONSTRAINT_LABELS.get(code, code)
+            lines.append(f"- **{code} — {label}** (score {val:.1f}): {plain}")
+        lines.append("")
+    else:
+        lines += ["No constraint weaknesses detected.", ""]
+
+    repair_parts = [_REPAIR_PHRASES[c] for c, _ in weakest[:3] if c in _REPAIR_PHRASES]
+    if repair_parts:
+        repair_prompt = "Rewrite the answer with " + ", ".join(repair_parts) + "."
+    else:
+        repair_prompt = "No structural repair needed based on current scores."
+
+    lines += [
+        "**Recommended action:**",
+        action,
+        "",
+        "**Repair prompt:**",
+        f'> "{repair_prompt}"',
+        "",
+        "---",
+        "_AOSL is not a truth detector. This report reflects structural divergence signals only._",
+    ]
+
+    return "\n".join(lines)
+
+
 # -- Page config ---------------------------------------------------------------
 
 st.set_page_config(
@@ -108,13 +229,30 @@ with tab_score:
     with col_in:
         st.subheader("Input")
 
+        st.caption("Load a quick example to try scoring:")
+        ex_col1, ex_col2, ex_col3 = st.columns(3)
+        with ex_col1:
+            if st.button(_EXAMPLES["stable"]["label"], key="ex_stable"):
+                st.session_state["score_prompt"] = _EXAMPLES["stable"]["prompt"]
+                st.session_state["score_output"] = _EXAMPLES["stable"]["output"]
+        with ex_col2:
+            if st.button(_EXAMPLES["overconfident"]["label"], key="ex_overconfident"):
+                st.session_state["score_prompt"] = _EXAMPLES["overconfident"]["prompt"]
+                st.session_state["score_output"] = _EXAMPLES["overconfident"]["output"]
+        with ex_col3:
+            if st.button(_EXAMPLES["causal_leap"]["label"], key="ex_causal_leap"):
+                st.session_state["score_prompt"] = _EXAMPLES["causal_leap"]["prompt"]
+                st.session_state["score_output"] = _EXAMPLES["causal_leap"]["output"]
+
         prompt_text = st.text_area(
             "Prompt",
+            key="score_prompt",
             height=140,
             placeholder="Paste the prompt that was sent to the AI model.",
         )
         output_text = st.text_area(
             "AI Output",
+            key="score_output",
             height=200,
             placeholder="Paste the AI-generated output to evaluate.",
         )
@@ -143,144 +281,202 @@ with tab_score:
     with col_out:
         st.subheader("Results")
 
-        if not score_btn:
+        # ── Run scoring (only when button clicked) ────────────────────────────
+
+        if score_btn:
+            if not output_text.strip():
+                st.error("AI Output is required.")
+                st.session_state.pop("single_score_result", None)
+            else:
+                with st.spinner(f"Scoring with {judge_model} …"):
+                    row = {
+                        "prompt_id":   "demo",
+                        "prompt_text": prompt_text.strip(),
+                        "output_text": output_text.strip(),
+                        "model_name":  "user-input",
+                        "temperature": "",
+                        "repeat":      1,
+                    }
+                    _new_result = score_row_real_judge(
+                        row,
+                        judge_model=judge_model,
+                        timeout=60,
+                        max_tokens=300,
+                    )
+                if _new_result.get("scorer_error"):
+                    err = str(_new_result["scorer_error"])
+                    if _new_result.get("scorer_credit_error"):
+                        st.error(
+                            "**Credit error (HTTP 402).** "
+                            "OpenRouter rejected the request.  \n"
+                            "Top up your OpenRouter balance and retry.  \n"
+                            f"Detail: {err}"
+                        )
+                    else:
+                        st.error(f"**Scoring error:** {err}")
+                    st.session_state.pop("single_score_result", None)
+                else:
+                    st.session_state["single_score_result"] = _new_result
+                    st.session_state["single_score_judge"]  = judge_model
+                    st.session_state["single_score_prompt"] = prompt_text.strip()
+                    st.session_state["single_score_output"] = output_text.strip()
+
+        # ── Render from session_state (persists through download-button clicks) ─
+
+        if "single_score_result" not in st.session_state:
             st.markdown(
                 "<p style='color:#888; padding-top:1.5rem'>"
                 "Results appear here after scoring."
                 "</p>",
                 unsafe_allow_html=True,
             )
-
-        elif not output_text.strip():
-            st.error("AI Output is required.")
-
         else:
-            with st.spinner(f"Scoring with {judge_model} …"):
-                row = {
-                    "prompt_id":   "demo",
-                    "prompt_text": prompt_text.strip(),
-                    "output_text": output_text.strip(),
-                    "model_name":  "user-input",
-                    "temperature": "",
-                    "repeat":      1,
-                }
-                result = score_row_real_judge(
-                    row,
-                    judge_model=judge_model,
-                    timeout=60,
-                    max_tokens=300,
-                )
+            result      = st.session_state["single_score_result"]
+            judge_model = st.session_state["single_score_judge"]
+            prompt_text = st.session_state["single_score_prompt"]
+            output_text = st.session_state["single_score_output"]
 
-            # ── Error handling ────────────────────────────────────────────────
+            # ── Extract results ───────────────────────────────────────────
 
-            if result.get("scorer_error"):
-                err = str(result["scorer_error"])
-                if result.get("scorer_credit_error"):
-                    st.error(
-                        "**Credit error (HTTP 402).** "
-                        "OpenRouter rejected the request.  \n"
-                        "Top up your OpenRouter balance and retry.  \n"
-                        f"Detail: {err}"
-                    )
-                else:
-                    st.error(f"**Scoring error:** {err}")
+            d_score    = float(result.get("divergence",      0.0))
+            stab_score = float(result.get("stability_score", 1.0 - d_score))
+            tier       = str(result.get("stability_tier", "—"))
+            notes      = str(result.get("notes", ""))
 
+            constraint_vals = {
+                code: result.get(code) for code in CONSTRAINT_CODES
+            }
+
+            # ── D score display ───────────────────────────────────────────
+
+            if d_score < _D_LOW:
+                d_color = "#2e7d32"
+                interp  = "Likely stable. No significant structural violations detected."
+            elif d_score < _D_MEDIUM:
+                d_color = "#e65100"
+                interp  = "Review recommended. Structural concerns are present."
             else:
-                # ── Extract results ───────────────────────────────────────────
+                d_color = "#c62828"
+                interp  = "Structurally unstable. Human review required before use."
 
-                d_score    = float(result.get("divergence",      0.0))
-                stab_score = float(result.get("stability_score", 1.0 - d_score))
-                tier       = str(result.get("stability_tier", "—"))
-                notes      = str(result.get("notes", ""))
+            st.markdown(
+                f"<div style='font-size:3rem; font-weight:700; "
+                f"color:{d_color}; line-height:1.1; margin-bottom:0.2rem'>"
+                f"D = {d_score:.4f}"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                f"**Stability score:** {stab_score:.4f}"
+                f" &nbsp;|&nbsp; **Tier:** {tier}"
+                f" &nbsp;|&nbsp; **Judge:** `{judge_model}`"
+            )
+            st.info(f"**Interpretation:** {interp}")
+            st.caption(
+                "D = average constraint violation rate (0 = no violations, "
+                "1 = all violated). Does not detect factual truth."
+            )
 
-                constraint_vals = {
-                    code: result.get(code) for code in CONSTRAINT_CODES
-                }
+            st.divider()
 
-                # ── D score display ───────────────────────────────────────────
+            # ── C1–C10 table ──────────────────────────────────────────────
 
-                if d_score < _D_LOW:
-                    d_color = "#2e7d32"
-                    interp  = "Likely stable. No significant structural violations detected."
-                elif d_score < _D_MEDIUM:
-                    d_color = "#e65100"
-                    interp  = "Review recommended. Structural concerns are present."
+            st.markdown("**C1–C10 Constraint Scores**")
+
+            table_rows = []
+            for code in CONSTRAINT_CODES:
+                val = constraint_vals.get(code)
+                label = CONSTRAINT_LABELS.get(code, code)
+                if val is None:
+                    score_str = "—"
+                    status    = "—"
                 else:
-                    d_color = "#c62828"
-                    interp  = "Structurally unstable. Human review required before use."
-
-                st.markdown(
-                    f"<div style='font-size:3rem; font-weight:700; "
-                    f"color:{d_color}; line-height:1.1; margin-bottom:0.2rem'>"
-                    f"D = {d_score:.4f}"
-                    f"</div>",
-                    unsafe_allow_html=True,
-                )
-                st.markdown(
-                    f"**Stability score:** {stab_score:.4f}"
-                    f" &nbsp;|&nbsp; **Tier:** {tier}"
-                    f" &nbsp;|&nbsp; **Judge:** `{judge_model}`"
-                )
-                st.info(f"**Interpretation:** {interp}")
-                st.caption(
-                    "D = average constraint violation rate (0 = no violations, "
-                    "1 = all violated). Does not detect factual truth."
-                )
-
-                st.divider()
-
-                # ── C1–C10 table ──────────────────────────────────────────────
-
-                st.markdown("**C1–C10 Constraint Scores**")
-
-                table_rows = []
-                for code in CONSTRAINT_CODES:
-                    val = constraint_vals.get(code)
-                    label = CONSTRAINT_LABELS.get(code, code)
-                    if val is None:
-                        score_str = "—"
-                        status    = "—"
+                    v = float(val)
+                    score_str = f"{v:.1f}"
+                    if v == 0.0:
+                        status = "FAIL"
+                    elif v == 0.5:
+                        status = "PARTIAL"
                     else:
-                        v = float(val)
-                        score_str = f"{v:.1f}"
-                        if v == 0.0:
-                            status = "FAIL"
-                        elif v == 0.5:
-                            status = "PARTIAL"
-                        else:
-                            status = "pass"
-                    table_rows.append({
-                        "Code":       code,
-                        "Constraint": label,
-                        "Score":      score_str,
-                        "Status":     status,
-                    })
+                        status = "pass"
+                table_rows.append({
+                    "Code":       code,
+                    "Constraint": label,
+                    "Score":      score_str,
+                    "Status":     status,
+                })
 
-                st.table(table_rows)
+            st.table(table_rows)
 
-                # ── Weakest constraints ───────────────────────────────────────
+            # ── Weakest constraints ───────────────────────────────────────
 
-                scored_pairs = [
-                    (code, float(constraint_vals[code]))
-                    for code in CONSTRAINT_CODES
-                    if constraint_vals.get(code) is not None
-                ]
-                scored_pairs.sort(key=lambda x: x[1])
-                weakest = [p for p in scored_pairs if p[1] < 1.0]
+            scored_pairs = [
+                (code, float(constraint_vals[code]))
+                for code in CONSTRAINT_CODES
+                if constraint_vals.get(code) is not None
+            ]
+            scored_pairs.sort(key=lambda x: x[1])
+            weakest = [p for p in scored_pairs if p[1] < 1.0]
 
-                if weakest:
-                    st.markdown("**Weakest constraints:**")
-                    for code, val in weakest[:3]:
-                        label = CONSTRAINT_LABELS.get(code, code)
-                        st.markdown(f"- **{code}** {label} — {val:.1f}")
-                else:
-                    st.success("All constraints passed (D = 0).")
+            if weakest:
+                st.markdown("**Weakest constraints:**")
+                for code, val in weakest[:3]:
+                    label = CONSTRAINT_LABELS.get(code, code)
+                    st.markdown(f"- **{code}** {label} — {val:.1f}")
+            else:
+                st.success("All constraints passed (D = 0).")
 
-                # ── Judge notes ───────────────────────────────────────────────
+            # ── Plain-English Report ──────────────────────────────────────
 
-                if notes:
-                    with st.expander("Judge notes"):
-                        st.write(notes)
+            st.divider()
+            st.markdown("**Plain-English Report**")
+            plain_report = build_plain_english_report(result)
+            st.markdown(plain_report)
+
+            # ── Single-score download ─────────────────────────────────────
+
+            dl_lines = [
+                "# AOSL Score Report", "",
+                f"**Judge:** `{judge_model}`",
+                f"**D score:** {d_score:.4f}  |  "
+                f"**Stability score:** {stab_score:.4f}  |  **Tier:** {tier}",
+                "",
+                "## Prompt", "",
+                prompt_text or "_(not provided)_",
+                "",
+                "## AI Output", "",
+                output_text,
+                "",
+                "## C1–C10 Constraint Scores", "",
+                "| Code | Constraint | Score | Status |",
+                "|---|---|---|---|",
+            ]
+            for tr in table_rows:
+                dl_lines.append(
+                    f"| {tr['Code']} | {tr['Constraint']} | {tr['Score']} | {tr['Status']} |"
+                )
+            dl_lines += [
+                "",
+                "## Plain-English Report", "",
+                plain_report,
+                "",
+                "---",
+                "_AOSL is not a truth detector. Scores reflect structural divergence signals only. "
+                "Not for high-stakes decisions without human review._",
+            ]
+            st.download_button(
+                "Download Markdown report",
+                data="\n".join(dl_lines),
+                file_name="aosl_score_report.md",
+                mime="text/markdown",
+                key="dl_single_report",
+            )
+
+            # ── Judge notes ───────────────────────────────────────────────
+
+            if notes:
+                with st.expander("Judge notes"):
+                    st.write(notes)
 
 
 # =============================================================================
@@ -327,6 +523,13 @@ with tab_batch:
         )
 
     # ── Upload ────────────────────────────────────────────────────────────────
+
+    st.info(
+        "**Sample data:** A 5-row demo CSV is available in the repo at  \n"
+        "`03_DATA\\sample_inputs\\aosl_demo_sample_outputs.csv`  \n"
+        "It contains 2 stable, 2 structurally weak, and 1 mixed example.  \n"
+        "You can also download a blank template from the expander above."
+    )
 
     uploaded = st.file_uploader("Upload CSV", type=["csv"])
 

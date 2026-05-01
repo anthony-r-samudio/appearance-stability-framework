@@ -189,15 +189,84 @@ The full ladder is also visible inside the **Evidence Ladder** tab of the demo.
 
 ---
 
+## Sample Data
+
+A ready-to-use sample CSV is included in the repo:
+
+```
+03_DATA\sample_inputs\aosl_demo_sample_outputs.csv
+```
+
+**Contents (5 rows):**
+
+| prompt_id  | expected_failure_focus   | Description                        |
+|------------|--------------------------|------------------------------------|
+| demo_s01   | control_stable           | Stable: arithmetic question        |
+| demo_s02   | control_stable           | Stable: factual/explanatory answer |
+| demo_w01   | c7_missing_uncertainty   | Overconfident: guaranteed outcome  |
+| demo_w02   | c3_causal_leap           | Causal leap: correlation as cause  |
+| demo_m01   | c9_no_evidence           | Mixed: claims without citations    |
+
+**How to use it:**
+1. Open the **Batch Score** tab
+2. Upload `03_DATA\sample_inputs\aosl_demo_sample_outputs.csv`
+3. Set Limit rows to 5 (or 0 for all), click **Run Batch**
+4. Download the scored CSV or Markdown report
+
+The stable rows should score near zero D. The structurally weak rows (demo_w01, demo_w02) should score noticeably higher. The mixed row (demo_m01) may vary.
+
+---
+
+## Plain-English Report
+
+After scoring a single output in the **Score Output** tab, the demo generates a Plain-English Report immediately below the C1–C10 table. It converts raw divergence and constraint scores into language a non-technical reviewer can act on.
+
+The report includes:
+
+- **Overall status** — Likely stable / Review recommended / Human review required, based on D thresholds (0.10 and 0.20)
+- **Divergence score** — the raw D value from the judge
+- **Main detected weaknesses** — up to three lowest-scoring constraints, described in plain language (e.g. "The output may make a causal leap.")
+- **Recommended action** — one sentence telling the user what to do with this output
+- **Repair prompt** — a copy-ready instruction for regenerating the output with targeted improvements
+
+A **Download Markdown report** button appears below the report. The downloaded `.md` file includes:
+- The original prompt and AI output
+- Judge model and D score
+- Full C1–C10 table
+- The plain-English report
+- A caveat: "AOSL is not a truth detector."
+
+---
+
+## Repair Prompt Workflow
+
+When the demo detects structural weaknesses, it generates a repair prompt — a short instruction for asking the AI model to revise the output with specific improvements.
+
+**Step-by-step:**
+
+1. Paste a prompt and AI output into the **Score Output** tab
+2. Click **Score Output**
+3. Read the Plain-English Report — note what is weak and why
+4. Copy the repair prompt from the report
+5. Go to your AI tool, paste the original prompt, and append the repair instruction
+6. Paste the new output back into the demo and re-score to see if D improved
+
+**Example (causal-leap case):**
+> "Rewrite the answer with no unsupported causal claims, appropriate hedging, clearer uncertainty acknowledgment."
+
+The repair prompt is constructed from the top detected weak constraints. It is a starting point for revision, not a complete editorial instruction. Whether the revised output scores lower D depends on the generator model and the judge.
+
+---
+
 ## Suggested Next Improvements
 
 The following improvements would increase demo utility for founders, reviewers, and collaborators:
 
-1. **Add example input buttons** — pre-fill the Score Output tab with a stable example and a pressured example so reviewers can see the contrast without needing their own prompts
+1. ~~**Add example input buttons**~~ — done: three example buttons (stable, overconfident, causal-leap) are now in the Score Output tab
 2. **Add better report formatting** — the Markdown summary is functional but plain; a styled HTML export would be more presentable
 3. **Add a cross-judge comparison view** — score the same output with two judges side by side and show the delta to make judge dependence visible
 4. **Add demo screenshots** — static PNG captures of a stable run and a pressured run, placed in `07_DOCS\` or a `screenshots\` subfolder
-5. **Package a small sample CSV** — place a 5–10 row example CSV in `03_DATA\` or `09_TEMP\` so reviewers can test batch scoring immediately without preparing their own file
+5. ~~**Package a small sample CSV**~~ — done: `03_DATA\sample_inputs\aosl_demo_sample_outputs.csv` with 5 labeled rows
 6. **Add a short public README section** — a 3–5 paragraph section in the repo README explaining what AOSL is, what the demo does, and how to run it
 
 ---
