@@ -7,7 +7,11 @@ Launch with:
     py -m streamlit run 05_SRC/apps/aosl_demo_v0_1.py
 """
 
+import csv
+import datetime
+import io
 import os
+import statistics
 import sys
 from pathlib import Path
 
@@ -43,7 +47,7 @@ CONSTRAINT_LABELS = {
 }
 
 JUDGE_OPTIONS = {
-    "deepseek/deepseek-chat (default)":        "deepseek/deepseek-chat",
+    "deepseek/deepseek-chat (default)":          "deepseek/deepseek-chat",
     "google/gemini-2.0-flash-001 (exploratory)": "google/gemini-2.0-flash-001",
 }
 
@@ -57,6 +61,9 @@ EVIDENCE_LADDER = [
 
 _D_LOW    = 0.10
 _D_MEDIUM = 0.20
+
+_BATCH_CSV_REQUIRED = {"prompt_id", "prompt_text", "output_text"}
+_BATCH_CSV_OPTIONAL = {"model_name", "expected_failure_focus", "temperature", "repeat"}
 
 # -- Page config ---------------------------------------------------------------
 
@@ -73,8 +80,8 @@ st.caption(
 
 # -- Tabs ----------------------------------------------------------------------
 
-tab_score, tab_ladder, tab_caveats = st.tabs(
-    ["Score Output", "Evidence Ladder", "Caveats"]
+tab_score, tab_batch, tab_ladder, tab_caveats = st.tabs(
+    ["Score Output", "Batch Score", "Evidence Ladder", "Caveats"]
 )
 
 
@@ -193,16 +200,14 @@ with tab_score:
                 # ── D score display ───────────────────────────────────────────
 
                 if d_score < _D_LOW:
-                    d_color = "#2e7d32"   # dark green
+                    d_color = "#2e7d32"
                     interp  = "Likely stable. No significant structural violations detected."
                 elif d_score < _D_MEDIUM:
-                    d_color = "#e65100"   # dark orange
+                    d_color = "#e65100"
                     interp  = "Review recommended. Structural concerns are present."
                 else:
-                    d_color = "#c62828"   # dark red
-                    interp  = (
-                        "Structurally unstable. Human review required before use."
-                    )
+                    d_color = "#c62828"
+                    interp  = "Structurally unstable. Human review required before use."
 
                 st.markdown(
                     f"<div style='font-size:3rem; font-weight:700; "
@@ -279,7 +284,349 @@ with tab_score:
 
 
 # =============================================================================
-# Tab 2 — Evidence Ladder
+# Tab 2 — Batch Score
+# =============================================================================
+
+with tab_batch:
+    st.subheader("Batch Score")
+    st.markdown(
+        "Upload a CSV of AI outputs to score in batch. "
+        "Each row is scored independently. Results can be downloaded as CSV or Markdown."
+    )
+
+    api_key_b = os.getenv("OPENROUTER_API_KEY", "").strip()
+    if not api_key_b:
+        st.warning(
+            "**OPENROUTER_API_KEY is not set.** "
+            "Scoring will be disabled until the key is present."
+        )
+
+    # ── CSV template download ─────────────────────────────────────────────────
+
+    with st.expander("CSV format — required and optional columns"):
+        st.markdown(
+            "**Required:** `prompt_id`, `prompt_text`, `output_text`  \n"
+            "**Optional:** `model_name`, `expected_failure_focus`, `temperature`, `repeat`"
+        )
+        template_buf = io.StringIO()
+        template_writer = csv.writer(template_buf)
+        template_writer.writerow(
+            ["prompt_id", "prompt_text", "output_text",
+             "model_name", "expected_failure_focus", "temperature", "repeat"]
+        )
+        template_writer.writerow(
+            ["ex-001", "What is the speed of light?",
+             "The speed of light is 300,000 km/s.",
+             "my-model", "c8_quantitative_error", "0.7", "1"]
+        )
+        st.download_button(
+            "Download CSV template",
+            data=template_buf.getvalue(),
+            file_name="aosl_batch_template.csv",
+            mime="text/csv",
+        )
+
+    # ── Upload ────────────────────────────────────────────────────────────────
+
+    uploaded = st.file_uploader("Upload CSV", type=["csv"])
+
+    if uploaded is None:
+        st.info("Upload a CSV file to begin.")
+
+    else:
+        content = uploaded.read().decode("utf-8", errors="replace")
+        reader  = csv.DictReader(io.StringIO(content))
+        all_rows = list(reader)
+        fieldnames = set(reader.fieldnames or [])
+
+        missing_cols = _BATCH_CSV_REQUIRED - fieldnames
+        if missing_cols:
+            st.error(
+                f"CSV is missing required column(s): **{', '.join(sorted(missing_cols))}**  \n"
+                "Required columns: `prompt_id`, `prompt_text`, `output_text`"
+            )
+        elif not all_rows:
+            st.error("CSV has no data rows.")
+        else:
+            st.success(f"Loaded {len(all_rows)} row(s).")
+
+            # Preview
+            preview_cols = [c for c in ["prompt_id", "prompt_text", "output_text", "model_name"] if c in fieldnames]
+            preview_rows = [{c: r.get(c, "") for c in preview_cols} for r in all_rows[:5]]
+            st.markdown(f"**Preview** (first {min(5, len(all_rows))} rows):")
+            st.dataframe(preview_rows, use_container_width=True)
+
+            # ── Controls ─────────────────────────────────────────────────────
+
+            st.divider()
+            col_b1, col_b2, col_b3, col_b4 = st.columns(4)
+
+            with col_b1:
+                judge_label_b = st.selectbox(
+                    "Judge model",
+                    options=list(JUDGE_OPTIONS.keys()),
+                    key="batch_judge",
+                )
+                judge_model_b = JUDGE_OPTIONS[judge_label_b]
+
+            with col_b2:
+                limit_b = st.number_input(
+                    "Limit rows (0 = all)",
+                    min_value=0,
+                    max_value=len(all_rows),
+                    value=0,
+                    step=1,
+                )
+
+            with col_b3:
+                max_tokens_b = st.number_input(
+                    "max_tokens",
+                    min_value=100,
+                    max_value=800,
+                    value=300,
+                    step=50,
+                )
+
+            with col_b4:
+                timeout_b = st.number_input(
+                    "timeout (s)",
+                    min_value=10,
+                    max_value=120,
+                    value=60,
+                    step=10,
+                )
+
+            rows_to_score = all_rows if int(limit_b) == 0 else all_rows[:int(limit_b)]
+            st.caption(
+                f"{len(rows_to_score)} row(s) will be scored · "
+                f"judge: {judge_model_b} · "
+                f"max_tokens: {int(max_tokens_b)} · "
+                f"timeout: {int(timeout_b)}s"
+            )
+
+            run_batch_btn = st.button(
+                "Run Batch",
+                type="primary",
+                disabled=(not api_key_b),
+            )
+            if not api_key_b:
+                st.caption("Scoring disabled — set OPENROUTER_API_KEY first.")
+
+            # ── Scoring loop ─────────────────────────────────────────────────
+
+            if run_batch_btn:
+                total         = len(rows_to_score)
+                progress_bar  = st.progress(0)
+                status_text   = st.empty()
+                scored_results = []
+
+                for i, row in enumerate(rows_to_score):
+                    pid = str(row.get("prompt_id", i + 1))
+                    status_text.text(f"Scoring {i + 1}/{total}: {pid}")
+
+                    result = score_row_real_judge(
+                        row,
+                        judge_model=judge_model_b,
+                        timeout=int(timeout_b),
+                        max_tokens=int(max_tokens_b),
+                    )
+                    scored_results.append(result)
+                    progress_bar.progress((i + 1) / total)
+
+                status_text.text(f"Done. {total} row(s) scored.")
+
+                # ── Aggregate stats ───────────────────────────────────────────
+
+                ok_rows  = [r for r in scored_results if not r.get("scorer_error")]
+                err_rows = [r for r in scored_results if r.get("scorer_error")]
+
+                d_vals = []
+                for r in ok_rows:
+                    raw = r.get("divergence")
+                    if raw not in (None, ""):
+                        try:
+                            d_vals.append(float(raw))
+                        except (ValueError, TypeError):
+                            pass
+
+                mean_d = statistics.mean(d_vals)                    if d_vals else None
+                std_d  = statistics.stdev(d_vals)                   if len(d_vals) > 1 else None
+                max_d  = max(d_vals)                                if d_vals else None
+
+                st.divider()
+                m1, m2, m3, m4 = st.columns(4)
+                m1.metric("Mean D",  f"{mean_d:.4f}" if mean_d is not None else "—")
+                m2.metric("Std D",   f"{std_d:.4f}"  if std_d  is not None else "—")
+                m3.metric("Max D",   f"{max_d:.4f}"  if max_d  is not None else "—")
+                m4.metric("Errors",  len(err_rows))
+
+                # ── Constraint mean table ─────────────────────────────────────
+
+                st.divider()
+                st.markdown("**Mean Constraint Scores across scored rows (C1–C10)**")
+
+                constraint_means = {}
+                for code in CONSTRAINT_CODES:
+                    vals = []
+                    for r in ok_rows:
+                        raw = r.get(code)
+                        if raw not in (None, ""):
+                            try:
+                                vals.append(float(raw))
+                            except (ValueError, TypeError):
+                                pass
+                    constraint_means[code] = statistics.mean(vals) if vals else None
+
+                cmean_table = [
+                    {
+                        "Code":       code,
+                        "Constraint": CONSTRAINT_LABELS.get(code, code),
+                        "Mean Score": f"{constraint_means[code]:.4f}"
+                                      if constraint_means[code] is not None else "—",
+                    }
+                    for code in CONSTRAINT_CODES
+                ]
+                st.table(cmean_table)
+
+                ranked = [
+                    (code, constraint_means[code])
+                    for code in CONSTRAINT_CODES
+                    if constraint_means.get(code) is not None and constraint_means[code] < 1.0
+                ]
+                ranked.sort(key=lambda x: x[1])
+                if ranked:
+                    st.markdown("**Weakest constraints (batch mean):**")
+                    for code, val in ranked[:3]:
+                        st.markdown(
+                            f"- **{code}** {CONSTRAINT_LABELS.get(code, code)} "
+                            f"— mean {val:.4f}"
+                        )
+
+                # ── Row-level results table ───────────────────────────────────
+
+                st.divider()
+                st.markdown("**Row-Level Results**")
+
+                display_cols = (
+                    ["prompt_id"]
+                    + CONSTRAINT_CODES
+                    + ["divergence", "stability_score", "stability_tier", "scorer_error"]
+                )
+                display_rows = []
+                for r in scored_results:
+                    dr = {}
+                    for col in display_cols:
+                        v = r.get(col, "")
+                        dr[col] = "" if v is None else v
+                    display_rows.append(dr)
+
+                st.dataframe(display_rows, use_container_width=True)
+
+                # ── Downloads ─────────────────────────────────────────────────
+
+                st.divider()
+                st.markdown("**Downloads**")
+
+                # Build ordered field list for CSV export
+                _priority = (
+                    ["prompt_id", "prompt_text", "output_text", "model_name",
+                     "temperature", "repeat", "expected_failure_focus"]
+                    + CONSTRAINT_CODES
+                    + ["divergence", "stability_score", "stability_tier",
+                       "notes", "scorer", "scorer_error", "scorer_credit_error"]
+                )
+                seen_keys: set = set()
+                export_fields = []
+                for k in _priority:
+                    if k not in seen_keys:
+                        export_fields.append(k)
+                        seen_keys.add(k)
+                for r in scored_results:
+                    for k in r:
+                        if k not in seen_keys:
+                            export_fields.append(k)
+                            seen_keys.add(k)
+
+                csv_buf = io.StringIO()
+                writer  = csv.DictWriter(
+                    csv_buf, fieldnames=export_fields, extrasaction="ignore"
+                )
+                writer.writeheader()
+                writer.writerows(scored_results)
+
+                dl_col1, dl_col2 = st.columns(2)
+
+                with dl_col1:
+                    st.download_button(
+                        "Download scored CSV",
+                        data=csv_buf.getvalue(),
+                        file_name="aosl_batch_scored.csv",
+                        mime="text/csv",
+                    )
+
+                # Build Markdown summary
+                now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+                md = io.StringIO()
+                md.write("# AOSL Batch Score Report\n\n")
+                md.write(f"**Date:** {now_str}  \n")
+                md.write(f"**Judge:** {judge_model_b}  \n")
+                md.write(f"**Rows scored:** {total}  \n")
+                md.write(f"**Errors:** {len(err_rows)}  \n\n")
+
+                md.write("## Divergence Summary\n\n")
+                md.write("| Metric | Value |\n|---|---|\n")
+                md.write(f"| Mean D | {mean_d:.4f} |\n" if mean_d is not None else "| Mean D | — |\n")
+                md.write(f"| Std D  | {std_d:.4f} |\n"  if std_d  is not None else "| Std D  | — |\n")
+                md.write(f"| Max D  | {max_d:.4f} |\n"  if max_d  is not None else "| Max D  | — |\n")
+                md.write(f"| Errors | {len(err_rows)} |\n\n")
+
+                md.write("## Constraint Means (C1–C10)\n\n")
+                md.write("| Code | Constraint | Mean Score |\n|---|---|---|\n")
+                for code in CONSTRAINT_CODES:
+                    val = constraint_means.get(code)
+                    val_str = f"{val:.4f}" if val is not None else "—"
+                    md.write(f"| {code} | {CONSTRAINT_LABELS.get(code, code)} | {val_str} |\n")
+
+                md.write("\n## Row-Level Results\n\n")
+                header_codes = " | ".join(CONSTRAINT_CODES)
+                sep_codes    = " | ".join("---" for _ in CONSTRAINT_CODES)
+                md.write(f"| prompt_id | D | Tier | {header_codes} | Error |\n")
+                md.write(f"|---|---|---| {sep_codes} |---|\n")
+                for r in scored_results:
+                    pid_md  = str(r.get("prompt_id", ""))
+                    raw_d   = r.get("divergence")
+                    d_md    = f"{float(raw_d):.4f}" if raw_d not in (None, "") else "—"
+                    tier_md = str(r.get("stability_tier", ""))
+                    codes_md = " | ".join(str(r.get(c, "")) for c in CONSTRAINT_CODES)
+                    err_md  = str(r.get("scorer_error", ""))[:80] if r.get("scorer_error") else ""
+                    md.write(f"| {pid_md} | {d_md} | {tier_md} | {codes_md} | {err_md} |\n")
+
+                md.write(
+                    "\n---\n"
+                    "_Generated by AOSL Demo v0.1 — not a truth detector — "
+                    "early research prototype_\n"
+                )
+
+                with dl_col2:
+                    st.download_button(
+                        "Download Markdown summary",
+                        data=md.getvalue(),
+                        file_name="aosl_batch_summary.md",
+                        mime="text/markdown",
+                    )
+
+                # ── Error details ─────────────────────────────────────────────
+
+                if err_rows:
+                    with st.expander(f"Error details ({len(err_rows)} row(s))"):
+                        for r in err_rows:
+                            pid_e = r.get("prompt_id", "?")
+                            err_e = r.get("scorer_error", "unknown error")
+                            st.markdown(f"- **{pid_e}**: {err_e}")
+
+
+# =============================================================================
+# Tab 3 — Evidence Ladder
 # =============================================================================
 
 with tab_ladder:
@@ -332,7 +679,7 @@ DS stable  <  Llama stable  <  Llama pressured  <  DS pressured  <  Synthetic fl
 
 
 # =============================================================================
-# Tab 3 — Caveats
+# Tab 4 — Caveats
 # =============================================================================
 
 with tab_caveats:
