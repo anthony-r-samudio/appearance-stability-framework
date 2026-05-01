@@ -1,0 +1,6 @@
+label,dataset,generator,judge,rows,repeats,mean_d,std_d,min_d,max_d,error_rows,mean_stability_score,source
+DeepSeek stable,real_model_validation_30,deepseek/deepseek-chat,deepseek/deepseek-chat,30,1,0.0117,0.0252,0.0000,0.1000,0,0.9883,csv
+Llama stable,real_model_validation_30,meta-llama/llama-3.1-8b-instruct,deepseek/deepseek-chat,30,1,0.0250,0.0341,0.0000,0.1000,0,0.9750,csv
+Llama pressured,real_failure_validation_30,meta-llama/llama-3.1-8b-instruct,deepseek/deepseek-chat,90,3,0.0722,0.0628,0.0000,0.2500,0,0.9278,csv
+DeepSeek pressured,real_failure_validation_30,deepseek/deepseek-chat,deepseek/deepseek-chat,90,3,0.0939,0.0905,0.0000,0.4000,0,0.9061,csv
+Synthetic flawed,validation_30,synthetic hand-crafted,deepseek/deepseek-chat,30,1,0.2050,0.1493,0.0000,0.5500,0,0.7950,csv
