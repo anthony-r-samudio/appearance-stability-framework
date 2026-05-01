@@ -66,6 +66,67 @@ D = average constraint violation rate. 0 means no violations detected. Both stab
 
 ---
 
+## AOSL Agentic Review Prototype
+
+AOSL can now be used as a protocol inside a multi-agent review-and-repair loop: score → critique → repair → re-score → report.
+
+### Five-agent pipeline
+
+| Agent | Role |
+|-------|------|
+| Scoring Agent | Runs AOSL constraint scoring on the original output; identifies D, tier, and weakest constraints |
+| Critic Agent | Generates a structured free-text critique targeting the detected structural weaknesses |
+| Repair Agent | Produces a revised output guided by the critique and weakest-constraint list |
+| Re-score Agent | Runs AOSL constraint scoring on the repaired output |
+| Report Agent | Writes a Markdown report and CSV documenting original score, critique, repaired output, re-score, and per-constraint delta |
+
+### First prototype result
+
+Input: a causal-leap output attributing an app engagement drop directly to a new onboarding screen, with no evidence, no hedging, and no alternative causes considered.
+
+| Metric | Original | Repaired |
+|--------|----------|----------|
+| Divergence (D) | 0.4500 | 0.0000 |
+| Stability tier | S2 | S0 |
+| D improvement | — | −0.4500 |
+
+C3 (Causal Integrity), C4 (Epistemic Calibration), C7 (Uncertainty Acknowledgment), and C9 (Evidence Traceability) all moved from FAIL to PASS after repair. All ten constraints passed in the re-score run.
+
+### Why it matters
+
+AOSL began as a detection layer. This prototype shows it may also support structured correction workflows: detect instability → explain weakness → generate repair → verify improvement → produce audit record. The reviewer sees the original score, the critique, and the repaired output together, rather than reviewing an unscreened output from scratch.
+
+### Caveats
+
+- **One run is not validation.** The prototype ran once on a deliberately constructed example. Performance on naturalistic inputs has not been measured.
+- **Same judge throughout.** Scoring, critique, and repair all used `deepseek/deepseek-chat`. The re-score used the same model. A model may produce outputs optimized to its own scoring preferences.
+- **Repaired outputs still need human review.** D = 0.0 means the judge found no structural violations in this run — not that the output is correct or appropriate.
+- **Cross-judge and human validation still needed.** The improvement signal has not been replicated with an independent judge or assessed against human ratings.
+- **Not production-ready.** Local research prototype with no authentication, persistent storage, or rate limiting.
+
+### How to run (Windows PowerShell)
+
+```powershell
+cd "C:\Users\ZBOOK\Desktop\AOSL - ENGINE"
+$env:OPENROUTER_API_KEY = "sk-or-v1-..."
+
+# Dry run (prints plan, no API calls)
+py 05_SRC\analysis\run_multi_agent_review_v0_1.py --dry-run
+
+# Live run with built-in demo input
+py 05_SRC\analysis\run_multi_agent_review_v0_1.py
+```
+
+Output is written to `06_OUTPUTS\multi_agent_review\v0_1\`.
+
+### Documentation
+
+- [Agentic Review Memo v0.1](07_DOCS/AOSL_AGENTIC_REVIEW_MEMO_v0.1.md) — full research memo: pipeline design, prototype result, ASF/AOSL/Atlas framing, caveats, next steps
+- [First prototype report](06_OUTPUTS/multi_agent_review/v0_1/multi_agent_review_report_20260501_103352.md) — run `20260501_103352`: original score, critique, repaired output, re-score, per-constraint delta
+- [Script](05_SRC/analysis/run_multi_agent_review_v0_1.py) — `run_multi_agent_review_v0_1.py`
+
+---
+
 ## Structure
 - 00_CONFIG = config files
 - 01_CANON = canonical definitions and locked project docs
