@@ -334,16 +334,26 @@ with tab_batch:
         st.info("Upload a CSV file to begin.")
 
     else:
-        content = uploaded.read().decode("utf-8", errors="replace")
+        content = uploaded.read().decode("utf-8-sig", errors="replace")
         reader  = csv.DictReader(io.StringIO(content))
-        all_rows = list(reader)
-        fieldnames = set(reader.fieldnames or [])
+        raw_rows = list(reader)
+        raw_fieldnames = reader.fieldnames or []
+
+        # Normalize column names: strip BOM/whitespace, lowercase, spaces/hyphens→underscores
+        def _norm(name: str) -> str:
+            return name.strip().lstrip("﻿").lower().replace(" ", "_").replace("-", "_")
+
+        col_map = {raw: _norm(raw) for raw in raw_fieldnames}
+        all_rows = [{col_map.get(k, k): v for k, v in row.items()} for row in raw_rows]
+        fieldnames = set(col_map.values())
 
         missing_cols = _BATCH_CSV_REQUIRED - fieldnames
         if missing_cols:
             st.error(
                 f"CSV is missing required column(s): **{', '.join(sorted(missing_cols))}**  \n"
-                "Required columns: `prompt_id`, `prompt_text`, `output_text`"
+                f"Required: `prompt_id`, `prompt_text`, `output_text`  \n"
+                f"Detected (after normalization): `{', '.join(sorted(fieldnames)) or 'none'}`  \n"
+                "Check that your CSV has `prompt_id`, `prompt_text`, and `output_text` headers."
             )
         elif not all_rows:
             st.error("CSV has no data rows.")
@@ -522,10 +532,7 @@ with tab_batch:
 
                 st.dataframe(display_rows, use_container_width=True)
 
-                # ── Downloads ─────────────────────────────────────────────────
-
-                st.divider()
-                st.markdown("**Downloads**")
+                # ── Build downloads and persist in session_state ──────────────
 
                 # Build ordered field list for CSV export
                 _priority = (
@@ -553,67 +560,51 @@ with tab_batch:
                 )
                 writer.writeheader()
                 writer.writerows(scored_results)
-
-                dl_col1, dl_col2 = st.columns(2)
-
-                with dl_col1:
-                    st.download_button(
-                        "Download scored CSV",
-                        data=csv_buf.getvalue(),
-                        file_name="aosl_batch_scored.csv",
-                        mime="text/csv",
-                    )
+                st.session_state["batch_csv"] = csv_buf.getvalue()
 
                 # Build Markdown summary
                 now_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
-                md = io.StringIO()
-                md.write("# AOSL Batch Score Report\n\n")
-                md.write(f"**Date:** {now_str}  \n")
-                md.write(f"**Judge:** {judge_model_b}  \n")
-                md.write(f"**Rows scored:** {total}  \n")
-                md.write(f"**Errors:** {len(err_rows)}  \n\n")
+                md_buf = io.StringIO()
+                md_buf.write("# AOSL Batch Score Report\n\n")
+                md_buf.write(f"**Date:** {now_str}  \n")
+                md_buf.write(f"**Judge:** {judge_model_b}  \n")
+                md_buf.write(f"**Rows scored:** {total}  \n")
+                md_buf.write(f"**Errors:** {len(err_rows)}  \n\n")
 
-                md.write("## Divergence Summary\n\n")
-                md.write("| Metric | Value |\n|---|---|\n")
-                md.write(f"| Mean D | {mean_d:.4f} |\n" if mean_d is not None else "| Mean D | — |\n")
-                md.write(f"| Std D  | {std_d:.4f} |\n"  if std_d  is not None else "| Std D  | — |\n")
-                md.write(f"| Max D  | {max_d:.4f} |\n"  if max_d  is not None else "| Max D  | — |\n")
-                md.write(f"| Errors | {len(err_rows)} |\n\n")
+                md_buf.write("## Divergence Summary\n\n")
+                md_buf.write("| Metric | Value |\n|---|---|\n")
+                md_buf.write(f"| Mean D | {mean_d:.4f} |\n" if mean_d is not None else "| Mean D | — |\n")
+                md_buf.write(f"| Std D  | {std_d:.4f} |\n"  if std_d  is not None else "| Std D  | — |\n")
+                md_buf.write(f"| Max D  | {max_d:.4f} |\n"  if max_d  is not None else "| Max D  | — |\n")
+                md_buf.write(f"| Errors | {len(err_rows)} |\n\n")
 
-                md.write("## Constraint Means (C1–C10)\n\n")
-                md.write("| Code | Constraint | Mean Score |\n|---|---|---|\n")
+                md_buf.write("## Constraint Means (C1–C10)\n\n")
+                md_buf.write("| Code | Constraint | Mean Score |\n|---|---|---|\n")
                 for code in CONSTRAINT_CODES:
                     val = constraint_means.get(code)
                     val_str = f"{val:.4f}" if val is not None else "—"
-                    md.write(f"| {code} | {CONSTRAINT_LABELS.get(code, code)} | {val_str} |\n")
+                    md_buf.write(f"| {code} | {CONSTRAINT_LABELS.get(code, code)} | {val_str} |\n")
 
-                md.write("\n## Row-Level Results\n\n")
+                md_buf.write("\n## Row-Level Results\n\n")
                 header_codes = " | ".join(CONSTRAINT_CODES)
                 sep_codes    = " | ".join("---" for _ in CONSTRAINT_CODES)
-                md.write(f"| prompt_id | D | Tier | {header_codes} | Error |\n")
-                md.write(f"|---|---|---| {sep_codes} |---|\n")
+                md_buf.write(f"| prompt_id | D | Tier | {header_codes} | Error |\n")
+                md_buf.write(f"|---|---|---| {sep_codes} |---|\n")
                 for r in scored_results:
-                    pid_md  = str(r.get("prompt_id", ""))
-                    raw_d   = r.get("divergence")
-                    d_md    = f"{float(raw_d):.4f}" if raw_d not in (None, "") else "—"
-                    tier_md = str(r.get("stability_tier", ""))
+                    pid_md   = str(r.get("prompt_id", ""))
+                    raw_d    = r.get("divergence")
+                    d_md     = f"{float(raw_d):.4f}" if raw_d not in (None, "") else "—"
+                    tier_md  = str(r.get("stability_tier", ""))
                     codes_md = " | ".join(str(r.get(c, "")) for c in CONSTRAINT_CODES)
-                    err_md  = str(r.get("scorer_error", ""))[:80] if r.get("scorer_error") else ""
-                    md.write(f"| {pid_md} | {d_md} | {tier_md} | {codes_md} | {err_md} |\n")
+                    err_md   = str(r.get("scorer_error", ""))[:80] if r.get("scorer_error") else ""
+                    md_buf.write(f"| {pid_md} | {d_md} | {tier_md} | {codes_md} | {err_md} |\n")
 
-                md.write(
+                md_buf.write(
                     "\n---\n"
                     "_Generated by AOSL Demo v0.1 — not a truth detector — "
                     "early research prototype_\n"
                 )
-
-                with dl_col2:
-                    st.download_button(
-                        "Download Markdown summary",
-                        data=md.getvalue(),
-                        file_name="aosl_batch_summary.md",
-                        mime="text/markdown",
-                    )
+                st.session_state["batch_md"] = md_buf.getvalue()
 
                 # ── Error details ─────────────────────────────────────────────
 
@@ -623,6 +614,29 @@ with tab_batch:
                             pid_e = r.get("prompt_id", "?")
                             err_e = r.get("scorer_error", "unknown error")
                             st.markdown(f"- **{pid_e}**: {err_e}")
+
+            # ── Persistent downloads (survive download-button rerenders) ──────
+
+            if "batch_csv" in st.session_state:
+                st.divider()
+                st.markdown("**Downloads**")
+                dl_col1, dl_col2 = st.columns(2)
+                with dl_col1:
+                    st.download_button(
+                        "Download scored CSV",
+                        data=st.session_state["batch_csv"],
+                        file_name="aosl_batch_scored.csv",
+                        mime="text/csv",
+                        key="dl_csv_persist",
+                    )
+                with dl_col2:
+                    st.download_button(
+                        "Download Markdown summary",
+                        data=st.session_state["batch_md"],
+                        file_name="aosl_batch_summary.md",
+                        mime="text/markdown",
+                        key="dl_md_persist",
+                    )
 
 
 # =============================================================================
