@@ -1,7 +1,7 @@
 """
 run_content_stability_audit.py  (05_SRC/experiments/)
 
-CLI runner for the AOSL Content Stability Auditor v0.1.
+CLI runner for the AOSL Content Stability Auditor v0.2.
 
 Reads a local text file, runs the heuristic stability audit, and writes
 a JSON report and a Markdown report into the output directory.
@@ -73,6 +73,8 @@ def _print_summary(audit: dict, md_path: Path, json_path: Path) -> None:
         bar = "PASS   " if d["score"] >= 1.0 else ("PARTIAL" if d["score"] >= 0.5 else "FAIL   ")
         print(f"    {d['code'].upper():<4} {bar}  {d['name']}")
     print()
+    if audit.get("claim_analysis"):
+        print(f"  Claim analysis        : {len(audit['claim_analysis'])} elevated claim(s) classified")
     if audit.get("risky_claims"):
         print(f"  Risky claims detected : {len(audit['risky_claims'])}")
         for claim in audit["risky_claims"][:3]:
@@ -92,7 +94,7 @@ def _print_summary(audit: dict, md_path: Path, json_path: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="AOSL Content Stability Auditor v0.1 — CLI runner.",
+        description="AOSL Content Stability Auditor v0.2 — CLI runner.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Examples:\n"

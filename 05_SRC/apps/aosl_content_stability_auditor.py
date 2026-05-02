@@ -1,7 +1,7 @@
 """
 aosl_content_stability_auditor.py  (05_SRC/apps/)
 
-AOSL Content Stability Auditor v0.1 — Streamlit app.
+AOSL Content Stability Auditor v0.2 — Streamlit app.
 
 Launch:
     streamlit run 05_SRC\\apps\\aosl_content_stability_auditor.py
@@ -60,7 +60,7 @@ _RISK_COLOR = {
 # Page config
 # ---------------------------------------------------------------------------
 st.set_page_config(
-    page_title="AOSL Content Stability Auditor v0.1",
+    page_title="AOSL Content Stability Auditor v0.2",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -69,13 +69,14 @@ st.set_page_config(
 # Sidebar
 # ---------------------------------------------------------------------------
 with st.sidebar:
-    st.title("AOSL Auditor v0.1")
+    st.title("AOSL Auditor v0.2")
     st.caption("AI Output Stability Layer — Content Edition")
     st.markdown("---")
     st.markdown(
         "**What this does**\n\n"
         "Scores your content against the AOSL C1–C10 structural constraints "
-        "and estimates AI citation readiness and misinterpretation risk."
+        "and estimates AI citation readiness and misinterpretation risk. "
+        "v0.2 classifies claims by type and evidence expectation."
     )
     st.markdown("---")
     st.markdown(
@@ -87,17 +88,18 @@ with st.sidebar:
     )
     st.markdown("---")
     st.markdown(
-        "**Scorer:** `heuristic-v1`  \n"
-        "**Version:** v0.1 prototype  \n"
+        "**Scorer:** `heuristic-v2`  \n"
+        "**Version:** v0.2 prototype  \n"
         "**Status:** local research tool"
     )
 
 # ---------------------------------------------------------------------------
 # Main UI
 # ---------------------------------------------------------------------------
-st.title("AOSL Content Stability Auditor v0.1")
+st.title("AOSL Content Stability Auditor v0.2")
 st.caption(
     "Paste content below to score it against the AOSL C1–C10 structural constraints. "
+    "v0.2 classifies claims by type and evidence expectation. "
     "No API key required. Results are estimates, not guarantees."
 )
 st.markdown("---")
@@ -194,12 +196,32 @@ if submitted:
 
     st.markdown("---")
 
-    # ── C. Risky claims ─────────────────────────────────────────────────────
+    # ── C. Claim Analysis (new in v0.2) ──────────────────────────────────────
+    claim_analysis = audit.get("claim_analysis", [])
+    if claim_analysis:
+        st.subheader("Claim Analysis")
+        st.caption(
+            "Sentences classified as elevated-expectation or flagged claims. "
+            "Disclaimer sentences and heading-like phrases are excluded."
+        )
+        _EXP_COLOR = {"VERY HIGH": "red", "HIGH": "orange", "MEDIUM": "blue", "LOW": "gray"}
+        for c in claim_analysis:
+            color = _EXP_COLOR.get(c["evidence_expectation"], "gray")
+            with st.expander(
+                f":{color}[**{c['evidence_expectation']}**]  {c['type']}  —  "
+                f"{c['text'][:70]}{'...' if len(c['text']) > 70 else ''}"
+            ):
+                st.write(f"**Full sentence:** {c['text']}")
+                if c.get("risk_reason"):
+                    st.warning(c["risk_reason"])
+        st.markdown("---")
+
+    # ── D. Risky claims ──────────────────────────────────────────────────────
     st.subheader("Risky Claims")
     if audit.get("risky_claims"):
         st.caption(
             "Sentences detected as potentially unsupported, overconfident, "
-            "vague, or causally weak."
+            "vague, or causally weak. Disclaimer sentences are filtered out."
         )
         for claim in audit["risky_claims"]:
             st.markdown(f"> {claim}")
@@ -208,7 +230,7 @@ if submitted:
 
     st.markdown("---")
 
-    # ── D. Missing evidence ─────────────────────────────────────────────────
+    # ── E. Missing evidence ─────────────────────────────────────────────────
     st.subheader("Missing Evidence")
     if audit.get("missing_evidence"):
         st.caption("What is absent that would strengthen this content.")
@@ -219,7 +241,7 @@ if submitted:
 
     st.markdown("---")
 
-    # ── E. Recommended fixes + AI-readable improvements ─────────────────────
+    # ── F. Recommended fixes + AI-readable improvements ─────────────────────
     st.subheader("Recommended Fixes")
     if audit.get("recommended_fixes"):
         for fix in audit["recommended_fixes"]:
@@ -237,7 +259,7 @@ if submitted:
 
     st.markdown("---")
 
-    # ── F. Export ───────────────────────────────────────────────────────────
+    # ── G. Export ───────────────────────────────────────────────────────────
     st.subheader("Export Report")
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -279,7 +301,8 @@ if submitted:
 
     st.markdown("---")
     st.caption(
-        "**Disclaimer:** This is an early prototype using keyword heuristics. "
+        "**Disclaimer:** This is an early prototype using keyword heuristics (heuristic-v2). "
+        "Claim classification is heuristic-based and may misclassify edge cases. "
         "Results are estimates only. They do not prove AI platforms will cite, "
         "recommend, or rank this content. Human review is required before taking action."
     )

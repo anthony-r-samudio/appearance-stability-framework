@@ -2,7 +2,7 @@
 content_heuristic.py  (05_SRC/scoring/)
 
 Local deterministic heuristic scorer for AOSL Content Stability Audits.
-No API key required. v0.1 prototype — transparent and conservative.
+No API key required. v0.2 — claim-type-aware scoring.
 
 Scores content text against AOSL C1-C10 constraints using keyword/pattern
 heuristics. Not a substitute for real-judge scoring.
@@ -34,7 +34,6 @@ CONSTRAINT_NAMES = {
     "c10": "Constraint Interaction Consistency",
 }
 
-# Tier thresholds (based on stability_score = (1 - D/10) * 100)
 _TIERS = [
     (90.0, "S3", "Strong"),
     (70.0, "S2", "Usable"),
@@ -54,6 +53,45 @@ _SOURCE_MARKERS = [
     "cited in", "reference:", "reported by", "http://", "https://",
 ]
 
+# Named AI systems and credible institutions count as soft evidence for C1/C9
+_NAMED_SYSTEM_MARKERS = [
+    "chatgpt", "gpt-4", "gpt-3", "gpt4", "gpt3",
+    "claude", "claude-3", "gemini", "google ai", "google bard", "bard",
+    "perplexity", "llama ", "mistral", "copilot",
+    "openai", "anthropic", "google deepmind",
+]
+
+_AUTHORITY_CLAIM_MARKERS = [
+    "trusted by major", "trusted by leading", "trusted by fortune",
+    "trusted by thousands", "trusted by millions",
+    "used by millions", "used by leading",
+    "loved by", "#1 platform", "number one platform",
+    "the world's leading", "world-leading", "industry-leading",
+]
+
+_DISRUPTION_MARKERS = [
+    "replacing google", "replace google", "replacing traditional search",
+    "ai is replacing", "ai will replace", "is dying",
+    "will disappear", "the future of all search",
+    "revolutionizing the",
+]
+
+# Sentences matching these patterns are epistemic disclaimers — low risk
+_DISCLAIMER_PATTERNS = [
+    "does not prove", "does not guarantee", "not a guarantee",
+    "early prototype", "early research", "not yet validated",
+    "results may vary", "not for production", "not validated",
+    "this claim is partly", "it may be too broad",
+    "some marketers argue", "the safer claim",
+    "cannot guarantee", "not medical advice", "not legal advice",
+]
+
+_LIMITATION_MARKERS = [
+    "does not guarantee", "does not prove", "cannot guarantee",
+    "not a guarantee", "may not", "early prototype",
+    "early research", "under development", "results may vary",
+]
+
 _CAUSAL_MARKERS = [
     "because ", "therefore ", "thus ", "hence ", "leads to", "lead to",
     "causes ", "cause ", "results in", "result in", "proves that",
@@ -62,14 +100,20 @@ _CAUSAL_MARKERS = [
 ]
 
 _ABSOLUTE_MARKERS = [
-    "always ", "never ", "guarante",  # matches guarantee/guaranteed
+    "always ", "never ", "guarante",
     "undeniable", "undeniably", "definitively", "definitely ",
-    "certainly ", "certainty ", "100%", "will always", "cannot fail",
+    "certainly ", "100%", "will always", "cannot fail",
     "no doubt", "without question", "there is no question",
     "the only ", "the best ", "the leading ", "is superior", "are superior",
     "best in class", "most powerful", "most advanced",
     "will disappear", "will fail", "will not survive",
+    "instantly",
 ]
+
+# Subset used in classify_claims for evidence-expectation labelling.
+# "instantly" is a C4 performance claim but not an external factual claim
+# requiring a citation — keep it out of claim classification.
+_CLAIM_ABSOLUTE_MARKERS = [m for m in _ABSOLUTE_MARKERS if m != "instantly"]
 
 _SCOPE_MARKERS = [
     "all companies", "all businesses", "every company", "every business",
@@ -102,14 +146,21 @@ _HEDGE_MARKERS = [
     "for some ", "research suggests", "evidence suggests",
     "it is possible", "likely ", "unlikely ", "generally ",
     "typically ", "often ", "sometimes ", "in many cases",
+    "partly ", "in some ", "varies by",
+]
+
+_PREDICTION_MARKERS = [
+    "increasingly", "growing", "is changing", "are changing",
+    "will become", "may become", "becoming ", "is shifting",
+    "trend toward", "shift to", "shift toward",
 ]
 
 _FIX_MAP = {
     "c1":  "Add source attributions for key factual claims (e.g., 'According to [source]...').",
     "c2":  "Review content structure; remove or resolve contradictory statements.",
     "c3":  "Provide evidence or data to support causal claims ('X leads to Y').",
-    "c4":  "Replace absolute language ('always', 'guaranteed') with qualified claims or add supporting evidence.",
-    "c5":  "Narrow universal claims to specific audiences, contexts, or conditions.",
+    "c4":  "Replace absolute or unproven authority language with qualified claims or add supporting evidence.",
+    "c5":  "Narrow universal or disruption claims to specific audiences, contexts, or conditions.",
     "c6":  "Add appropriate disclaimers for medical, legal, or financial content.",
     "c7":  "Add hedging language ('may', 'research suggests') where claims are speculative.",
     "c8":  "Cite sources for all numerical statistics and percentages.",
@@ -118,12 +169,12 @@ _FIX_MAP = {
 }
 
 _MISSING_EVIDENCE_MAP = {
-    "c1": "Source attributions for factual assertions.",
+    "c1": "Source attributions for high-confidence or authority-level factual claims.",
     "c3": "Data or studies supporting causal claims.",
-    "c4": "Evidence for absolute claims, or qualification language.",
-    "c5": "Scope qualifiers (e.g., 'for most SMBs', 'in typical cases').",
+    "c4": "Evidence for absolute or authority claims, or qualification language.",
+    "c5": "Scope qualifiers (e.g., 'for most SMBs', 'in typical cases', 'in some markets').",
     "c6": "Caveats or disclaimers for sensitive claims.",
-    "c7": "Uncertainty acknowledgments for speculative claims.",
+    "c7": "Uncertainty acknowledgments for speculative or performance claims.",
     "c8": "Sources or context for numerical statistics.",
     "c9": "Citations, links, or named sources.",
     "c10": "Consistent evidence level across all claims.",
@@ -168,8 +219,16 @@ _TIER_INTERPRETATIONS = {
 # ---------------------------------------------------------------------------
 
 def _sentences(text: str) -> list[str]:
-    parts = re.split(r'(?<=[.!?])\s+', text)
-    return [p.strip() for p in parts if len(p.strip()) > 10]
+    """Split text into sentences, respecting paragraph breaks first."""
+    result = []
+    seen: set[str] = set()
+    for para in re.split(r'\n\n+', text):
+        for p in re.split(r'(?<=[.!?])\s+', para):
+            p = p.strip()
+            if len(p) > 10 and p not in seen:
+                seen.add(p)
+                result.append(p)
+    return result
 
 
 def _count_any(text_lower: str, patterns: list[str]) -> int:
@@ -205,19 +264,192 @@ def _tier(stability_score: float) -> tuple[str, str]:
             return code, label
     return "S0", "Unstable"
 
+
+def _is_disclaimer(sent: str) -> bool:
+    sl = sent.lower()
+    return any(p in sl for p in _DISCLAIMER_PATTERNS)
+
+
+def _soft_evidence_count(tl: str) -> int:
+    """Count named AI systems as soft evidence, capped at 3."""
+    return min(sum(1 for m in _NAMED_SYSTEM_MARKERS if m in tl), 3)
+
+# ---------------------------------------------------------------------------
+# Claim classifier
+# ---------------------------------------------------------------------------
+
+def classify_claims(text: str, tl: str) -> list[dict]:
+    """
+    Classify each sentence into a claim type with an evidence expectation level.
+
+    Returns a list of dicts:
+        text                : str  — original sentence
+        type                : str  — claim type label
+        evidence_expectation: str  — LOW | MEDIUM | HIGH | VERY HIGH
+        risk_reason         : str  — why this claim may be risky (empty if none)
+    """
+    results = []
+    for sent in _sentences(text):
+        sl = sent.lower()
+
+        # Heading-like lines (no terminal punctuation, short) — skip claim classification
+        # Catches file titles like "AI Is Replacing Google for Search" embedded in content
+        has_terminal = any(c in sl for c in '.!?,;:')
+        if not has_terminal and len(sl.split()) <= 12:
+            results.append({
+                "text": sent,
+                "type": "heading",
+                "evidence_expectation": "LOW",
+                "risk_reason": "",
+            })
+            continue
+
+        # Disclaimer sentences are epistemically sound — do not flag
+        if _is_disclaimer(sent):
+            results.append({
+                "text": sent,
+                "type": "disclaimer",
+                "evidence_expectation": "LOW",
+                "risk_reason": "",
+            })
+            continue
+
+        # Authority claims require strong named evidence
+        if any(p in sl for p in _AUTHORITY_CLAIM_MARKERS):
+            results.append({
+                "text": sent,
+                "type": "authority_claim",
+                "evidence_expectation": "VERY HIGH",
+                "risk_reason": "Authority claim requires specific named evidence (clients, verified data, audit).",
+            })
+            continue
+
+        # Disruption claims require trend data or explicit scope qualification
+        if any(p in sl for p in _DISRUPTION_MARKERS):
+            results.append({
+                "text": sent,
+                "type": "disruption_claim",
+                "evidence_expectation": "VERY HIGH",
+                "risk_reason": "Market disruption claim requires trend data or qualified scope.",
+            })
+            continue
+
+        # Guarantee language
+        if "guarante" in sl or "will definitely" in sl:
+            results.append({
+                "text": sent,
+                "type": "guarantee_claim",
+                "evidence_expectation": "VERY HIGH",
+                "risk_reason": "Guarantee language requires strong evidence or should be removed.",
+            })
+            continue
+
+        # Quantitative claims need cited sources
+        if re.search(r'\b\d+[\.,]?\d*\s*%|\b\d{4,}|\$[\d,]+', sent):
+            results.append({
+                "text": sent,
+                "type": "quantitative_claim",
+                "evidence_expectation": "HIGH",
+                "risk_reason": "Numeric claims require cited sources.",
+            })
+            continue
+
+        # Absolute language (use external-claim subset, not the full marker list)
+        if any(p in sl for p in _CLAIM_ABSOLUTE_MARKERS):
+            results.append({
+                "text": sent,
+                "type": "absolute_claim",
+                "evidence_expectation": "HIGH",
+                "risk_reason": "Absolute language requires supporting evidence or qualification.",
+            })
+            continue
+
+        # Causal claims — hedged causal is MEDIUM, unhedged is HIGH
+        if any(p in sl for p in _CAUSAL_MARKERS):
+            hedged = any(p in sl for p in ["may ", "might ", "could ", "suggests ", "possibly "])
+            exp = "MEDIUM" if hedged else "HIGH"
+            results.append({
+                "text": sent,
+                "type": "causal_claim",
+                "evidence_expectation": exp,
+                "risk_reason": "Causal claim should cite supporting evidence." if exp == "HIGH" else "",
+            })
+            continue
+
+        # Self-description: first-person or named-tool reference
+        if re.search(r'\b(we|our|the platform|the tool|the system|the auditor|the framework)\b', sl):
+            results.append({
+                "text": sent,
+                "type": "self_description",
+                "evidence_expectation": "LOW",
+                "risk_reason": "",
+            })
+            continue
+
+        # Educational/conceptual explanation
+        if re.search(r'\bis (the practice|the process|a framework|a method|defined as|a tool)\b|refers to\b', sl):
+            results.append({
+                "text": sent,
+                "type": "educational_explanation",
+                "evidence_expectation": "LOW",
+                "risk_reason": "",
+            })
+            continue
+
+        # Prediction or trend claim
+        if any(p in sl for p in _PREDICTION_MARKERS):
+            results.append({
+                "text": sent,
+                "type": "prediction_or_trend_claim",
+                "evidence_expectation": "MEDIUM",
+                "risk_reason": "",
+            })
+            continue
+
+        # Default: product positioning or general statement
+        results.append({
+            "text": sent,
+            "type": "product_positioning",
+            "evidence_expectation": "LOW",
+            "risk_reason": "",
+        })
+
+    return results
+
 # ---------------------------------------------------------------------------
 # Per-constraint scorers
 # Each returns (score: float, explanation: str, risky_sentences: list[str])
 # ---------------------------------------------------------------------------
 
-def _c1(text: str, tl: str):
+def _c1(text: str, tl: str, classified: list[dict]):
     src = _count_any(tl, _SOURCE_MARKERS)
-    fact_sents = [s for s in _sentences(text) if re.search(r'\b(?:is|are|was|were)\b|\d+%', s)]
-    if src == 0 and len(fact_sents) > 2:
-        return 0.0, "Multiple factual claims detected but no source markers.", fact_sents[:3]
-    if src < max(1, len(fact_sents) // 4):
-        return 0.5, f"Few source markers ({src}) relative to apparent factual claims.", fact_sents[:2]
-    return 1.0, f"Source markers present ({src}). Factual grounding appears adequate.", []
+    soft = _soft_evidence_count(tl)
+    total_evidence = src + soft
+
+    high_claims  = [c for c in classified if c["evidence_expectation"] in ("HIGH", "VERY HIGH")]
+    vhigh_claims = [c for c in classified if c["evidence_expectation"] == "VERY HIGH"]
+
+    if not high_claims:
+        return 1.0, "No external factual claims requiring source attribution detected.", []
+
+    if vhigh_claims and total_evidence == 0:
+        sents = [c["text"] for c in vhigh_claims[:3] if not _is_disclaimer(c["text"])]
+        return 0.0, (
+            f"{len(vhigh_claims)} high-confidence claim(s) with no source attribution "
+            f"or named references."
+        ), sents
+
+    if len(high_claims) > total_evidence * 2 and total_evidence < 2:
+        sents = [c["text"] for c in high_claims[:2] if not _is_disclaimer(c["text"])]
+        return 0.5, (
+            f"{len(high_claims)} factual claim(s) with limited source support "
+            f"({total_evidence} evidence point(s))."
+        ), sents
+
+    return 1.0, (
+        f"Factual claims ({len(high_claims)}) have adequate support "
+        f"({total_evidence} evidence point(s), including {soft} named reference(s))."
+    ), []
 
 
 def _c2(text: str, tl: str):
@@ -237,6 +469,8 @@ def _c3(text: str, tl: str):
     causal = _count_any(tl, _CAUSAL_MARKERS)
     src = _count_any(tl, _SOURCE_MARKERS)
     sents = _matching_sentences(text, _CAUSAL_MARKERS)
+    # Filter disclaimer sentences from risky list
+    sents = [s for s in sents if not _is_disclaimer(s)]
     if causal == 0:
         return 1.0, "No causal claims detected.", []
     if src == 0:
@@ -247,29 +481,84 @@ def _c3(text: str, tl: str):
 
 
 def _c4(text: str, tl: str):
-    n = _count_any(tl, _ABSOLUTE_MARKERS)
-    sents = _matching_sentences(text, _ABSOLUTE_MARKERS)
-    if n > 3:
-        return 0.0, f"{n} absolute or certainty claims detected.", sents[:3]
-    if n > 0:
-        return 0.5, f"{n} absolute or certainty claim(s) detected.", sents[:2]
-    return 1.0, "No unwarranted certainty language detected.", []
+    # Count absolute markers; handle "guarante" with negation exclusion
+    # ("does not guarantee" is an epistemic disclaimer, not an overclaim)
+    markers_no_g = [m for m in _ABSOLUTE_MARKERS if m != "guarante"]
+    abs_count = _count_any(tl, markers_no_g)
+    g_total   = tl.count("guarante")
+    g_negated = (tl.count("not guarante") + tl.count("no guarante")
+                 + tl.count("cannot guarante") + tl.count("doesn't guarante"))
+    abs_count += max(0, g_total - g_negated)
+    auth_count = _count_any(tl, _AUTHORITY_CLAIM_MARKERS)
+    overclaim_count = abs_count + auth_count
+    hedge_count = _count_any(tl, _HEDGE_MARKERS)
+
+    all_markers = _ABSOLUTE_MARKERS + _AUTHORITY_CLAIM_MARKERS
+    sents = [s for s in _matching_sentences(text, all_markers) if not _is_disclaimer(s)]
+
+    if overclaim_count == 0:
+        return 1.0, "No unwarranted certainty or authority claims detected.", []
+
+    # Hedge mitigation: well-hedged content gets one penalty level relief
+    well_hedged = hedge_count >= 2 * overclaim_count
+
+    if overclaim_count > 3:
+        if well_hedged:
+            return 0.5, (
+                f"{overclaim_count} strong claim(s) but substantially hedged "
+                f"({hedge_count} hedge markers)."
+            ), sents[:2]
+        return 0.0, f"{overclaim_count} absolute or authority claim(s) detected.", sents[:3]
+
+    # 1–3 overclaims
+    if well_hedged:
+        return 1.0, (
+            f"{overclaim_count} strong claim(s) substantially hedged "
+            f"({hedge_count} hedge markers). Epistemic calibration acceptable."
+        ), []
+    return 0.5, f"{overclaim_count} absolute or authority claim(s) detected.", sents[:2]
 
 
 def _c5(text: str, tl: str):
-    n = _count_any(tl, _SCOPE_MARKERS)
-    sents = _matching_sentences(text, _SCOPE_MARKERS)
-    if n > 2:
-        return 0.0, f"Multiple universal scope claims ({n}).", sents[:3]
-    if n > 0:
-        return 0.5, f"Universal scope language detected ({n} instance(s)).", sents[:2]
-    return 1.0, "Scope appears appropriately bounded.", []
+    # Use word-boundary matching for scope markers to avoid false positives
+    # e.g. "all businesses" must not match inside "small businesses"
+    scope_count   = sum(
+        1 for p in _SCOPE_MARKERS
+        if re.search(r'\b' + re.escape(p.strip()) + r'\b', tl)
+    )
+    disrupt_count = _count_any(tl, _DISRUPTION_MARKERS)
+    overclaim_count = scope_count + disrupt_count
+    hedge_count   = _count_any(tl, _HEDGE_MARKERS)
+
+    all_markers = _SCOPE_MARKERS + _DISRUPTION_MARKERS
+    sents = [s for s in _matching_sentences(text, all_markers) if not _is_disclaimer(s)]
+
+    if overclaim_count == 0:
+        return 1.0, "Scope appears appropriately bounded.", []
+
+    well_hedged = hedge_count >= 2 * overclaim_count
+
+    if overclaim_count > 2:
+        if well_hedged:
+            return 0.5, (
+                f"{overclaim_count} broad scope or disruption claim(s) detected "
+                f"but hedged ({hedge_count} hedge markers)."
+            ), sents[:2]
+        return 0.0, f"Multiple broad scope or disruption claims ({overclaim_count}).", sents[:3]
+
+    # 1–2 overclaims
+    if well_hedged:
+        return 1.0, (
+            f"{overclaim_count} broad claim(s) substantially hedged "
+            f"({hedge_count} hedge markers). Scope acceptable."
+        ), []
+    return 0.5, f"Broad scope or disruption claim(s) detected ({overclaim_count} instance(s)).", sents[:2]
 
 
 def _c6(text: str, tl: str):
-    risk = _count_any(tl, _SAFETY_RISK_MARKERS)
+    risk   = _count_any(tl, _SAFETY_RISK_MARKERS)
     caveat = _count_any(tl, _SAFETY_CAVEAT_MARKERS)
-    sents = _matching_sentences(text, _SAFETY_RISK_MARKERS)
+    sents  = _matching_sentences(text, _SAFETY_RISK_MARKERS)
     if risk == 0:
         return 1.0, "No safety-sensitive claims detected.", []
     if caveat == 0:
@@ -278,13 +567,20 @@ def _c6(text: str, tl: str):
 
 
 def _c7(text: str, tl: str):
-    hedge = _count_any(tl, _HEDGE_MARKERS)
-    absol = _count_any(tl, _ABSOLUTE_MARKERS)
-    words = len(text.split())
-    if absol > 2 and hedge == 0:
+    hedge  = _count_any(tl, _HEDGE_MARKERS)
+    absol  = _count_any(tl, _ABSOLUTE_MARKERS)
+    auth   = _count_any(tl, _AUTHORITY_CLAIM_MARKERS)
+    disrupt = _count_any(tl, _DISRUPTION_MARKERS)
+    total_confident = absol + auth + disrupt
+    words  = len(text.split())
+
+    if total_confident > 2 and hedge == 0:
         return 0.0, "Confident claims throughout with no uncertainty language.", []
-    if absol > hedge and words > 50:
-        return 0.5, f"Fewer hedges ({hedge}) than absolute claims ({absol}).", []
+    if total_confident > 0 and total_confident > hedge and words > 50:
+        return 0.5, f"Fewer hedges ({hedge}) than confident claims ({total_confident}).", []
+    # Substantive content with zero hedges at all is implicitly overconfident
+    if hedge == 0 and words > 60:
+        return 0.5, "No uncertainty acknowledgment detected in substantive content.", []
     return 1.0, f"Uncertainty language present ({hedge} hedge marker(s)).", []
 
 
@@ -300,24 +596,48 @@ def _c8(text: str, tl: str):
     return 1.0, "Numeric claims have source markers.", []
 
 
-def _c9(text: str, tl: str):
-    src = _count_any(tl, _SOURCE_MARKERS)
-    urls = len(re.findall(r'https?://', text))
+def _c9(text: str, tl: str, classified: list[dict]):
+    src       = _count_any(tl, _SOURCE_MARKERS)
+    urls      = len(re.findall(r'https?://', text))
     citations = len(re.findall(r'\[\d+\]|\[\^', text))
-    total = src + urls + citations
-    if total == 0:
-        return 0.0, "No citations, links, or named sources found.", []
-    if total <= 2:
-        return 0.5, f"Limited evidence traceability ({total} source marker(s)).", []
-    return 1.0, f"Evidence markers present ({total}).", []
+    soft      = _soft_evidence_count(tl)
+
+    formal_evidence = src + urls + citations
+    total_evidence  = formal_evidence + soft
+
+    high_claims = [c for c in classified if c["evidence_expectation"] in ("HIGH", "VERY HIGH")]
+
+    if total_evidence == 0 and high_claims:
+        return 0.0, (
+            f"No citations, named sources, or evidence markers; "
+            f"{len(high_claims)} high-expectation claim(s) present."
+        ), []
+
+    if total_evidence == 0:
+        return 0.5, (
+            "No formal citations found, but content does not make "
+            "high-expectation external claims."
+        ), []
+
+    if total_evidence <= 2 and len(high_claims) > total_evidence:
+        return 0.5, (
+            f"Limited evidence traceability ({total_evidence} source marker(s)) "
+            f"for {len(high_claims)} factual claim(s)."
+        ), []
+
+    return 1.0, (
+        f"Evidence markers present ({total_evidence} total, "
+        f"including {soft} named reference(s))."
+    ), []
 
 
 def _c10(scores: dict):
     c4 = scores["c4"]
     c9 = scores["c9"]
     c1 = scores["c1"]
-    if c4 <= 0.0 and c9 == 0.0:
-        return 0.0, "High-confidence claims with no evidence — tone and evidence are misaligned.", []
+    # Severe misalignment: grounding fails AND traceability fails
+    if (c4 <= 0.0 and c9 == 0.0) or (c1 == 0.0 and c9 == 0.0):
+        return 0.0, "Claim confidence and evidence are severely misaligned — high claims with no grounding or traceability.", []
     if (c4 < 1.0 and c9 < 1.0) or (c1 < 1.0 and c9 == 0.0):
         return 0.5, "Claim confidence and evidence level are partially misaligned.", []
     return 1.0, "Claim confidence and evidence level appear consistent.", []
@@ -344,15 +664,19 @@ def score_content(
 
     Returns
     -------
-    dict    Structured audit result. All fields documented in module docstring.
+    dict    Structured audit result.
     """
-    if not content.strip():
+    content = content.lstrip('﻿').strip()  # strip BOM if present
+    if not content:
         content = "(empty)"
 
     tl = content.lower()
 
+    # Classify claims first — used by C1 and C9
+    classified = classify_claims(content, tl)
+
     # Run per-constraint scorers
-    c1s, c1e, c1r   = _c1(content, tl)
+    c1s, c1e, c1r   = _c1(content, tl, classified)
     c2s, c2e, c2r   = _c2(content, tl)
     c3s, c3e, c3r   = _c3(content, tl)
     c4s, c4e, c4r   = _c4(content, tl)
@@ -360,7 +684,7 @@ def score_content(
     c6s, c6e, c6r   = _c6(content, tl)
     c7s, c7e, c7r   = _c7(content, tl)
     c8s, c8e, c8r   = _c8(content, tl)
-    c9s, c9e, c9r   = _c9(content, tl)
+    c9s, c9e, c9r   = _c9(content, tl, classified)
 
     raw = {
         "c1": c1s, "c2": c2s, "c3": c3s, "c4": c4s, "c5": c5s,
@@ -393,10 +717,11 @@ def score_content(
 
     # Per-constraint detail list
     detail_rows = [
-        ("c1", c1s, c1e, c1r), ("c2", c2s, c2e, c2r), ("c3", c3s, c3e, c3r),
-        ("c4", c4s, c4e, c4r), ("c5", c5s, c5e, c5r), ("c6", c6s, c6e, c6r),
-        ("c7", c7s, c7e, c7r), ("c8", c8s, c8e, c8r), ("c9", c9s, c9e, c9r),
-        ("c10", c10s, c10e, c10r),
+        ("c1",  c1s,  c1e,  c1r),  ("c2",  c2s,  c2e,  c2r),
+        ("c3",  c3s,  c3e,  c3r),  ("c4",  c4s,  c4e,  c4r),
+        ("c5",  c5s,  c5e,  c5r),  ("c6",  c6s,  c6e,  c6r),
+        ("c7",  c7s,  c7e,  c7r),  ("c8",  c8s,  c8e,  c8r),
+        ("c9",  c9s,  c9e,  c9r),  ("c10", c10s, c10e, c10r),
     ]
     constraint_details = [
         {
@@ -409,12 +734,19 @@ def score_content(
         for code, score, expl, _ in detail_rows
     ]
 
-    # Risky claims (aggregate from all constraint scorers, deduplicated)
+    # Risky claims: deduplicated, disclaimer sentences excluded
     risky_claims: list[str] = []
     for _, _, _, sents in detail_rows:
         for s in sents:
-            if s not in risky_claims:
+            if s not in risky_claims and not _is_disclaimer(s):
                 risky_claims.append(s)
+
+    # Claim analysis: structured list for the new claim_analysis field
+    # Include only claims with elevated expectation or a flagged risk reason
+    claim_analysis = [
+        c for c in classified
+        if c["evidence_expectation"] in ("HIGH", "VERY HIGH") or c["risk_reason"]
+    ]
 
     # Missing evidence and fixes (only for failing/partial constraints)
     missing_evidence = [
@@ -435,7 +767,7 @@ def score_content(
         "notes":      notes,
         "word_count": len(content.split()),
         "scored_at":  datetime.now().isoformat(timespec="seconds"),
-        "scorer":     "heuristic-v1",
+        "scorer":     "heuristic-v2",
 
         # Raw scores (C1-C10)
         **{c: raw[c] for c in CONSTRAINT_CODES},
@@ -454,6 +786,7 @@ def score_content(
         # Structured details
         "constraint_details":       constraint_details,
         "risky_claims":             risky_claims,
+        "claim_analysis":           claim_analysis,
         "missing_evidence":         missing_evidence,
         "recommended_fixes":        recommended_fixes,
         "ai_readable_improvements": _AI_READABLE_IMPROVEMENTS,
@@ -481,7 +814,7 @@ def build_markdown_report(audit: dict) -> str:
         f"| URL | {audit.get('url') or '(not provided)'} |",
         f"| Date | {audit.get('scored_at', '')} |",
         f"| Word count | {audit.get('word_count', 0)} |",
-        f"| Scorer | {audit.get('scorer', 'heuristic-v1')} |",
+        f"| Scorer | {audit.get('scorer', 'heuristic-v2')} |",
         "",
         "---",
         "",
@@ -510,6 +843,24 @@ def build_markdown_report(audit: dict) -> str:
         )
 
     lines += ["", "---", ""]
+
+    # Claim analysis section (new in v0.2)
+    claim_analysis = audit.get("claim_analysis", [])
+    if claim_analysis:
+        lines += [
+            "## Claim Analysis",
+            "",
+            "Sentences classified as elevated-expectation or flagged claims.",
+            "",
+            "| Type | Expectation | Sentence |",
+            "|------|-------------|----------|",
+        ]
+        for c in claim_analysis:
+            snippet = c["text"][:100] + ("..." if len(c["text"]) > 100 else "")
+            lines.append(
+                f"| {c['type']} | {c['evidence_expectation']} | {snippet} |"
+            )
+        lines += ["", "---", ""]
 
     if audit.get("risky_claims"):
         lines += ["## Main Risks", ""]
@@ -556,10 +907,11 @@ def build_markdown_report(audit: dict) -> str:
         "## What This Does Not Prove",
         "",
         (
-            "This v0.1 audit uses local keyword heuristics, not a trained model or human expert. "
+            "This v0.2 audit uses local keyword heuristics, not a trained model or human expert. "
             "It does not prove that AI platforms will cite, recommend, or rank this content. "
             "It does not detect factual errors — content can score high D and still be factually correct, "
             "or score low D and still be factually wrong. "
+            "Claim classification is heuristic-based and may misclassify edge cases. "
             "It is an estimate of structural readiness and evidence traceability, not a quality guarantee. "
             "Results should be reviewed by a human before taking action."
         ),
@@ -567,7 +919,7 @@ def build_markdown_report(audit: dict) -> str:
         "---",
         "",
         "```",
-        "Scorer  : heuristic-v1",
+        "Scorer  : heuristic-v2",
         "Status  : early prototype — not for production use",
         "```",
     ]
