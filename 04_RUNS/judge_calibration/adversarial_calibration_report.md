@@ -82,13 +82,42 @@ Weakest detected constraint vs. expected failure focus per prompt.
 
 ---
 
+## Constraint Co-Firing Analysis
+
+Whether the expected constraint fired at all (score < 1.0) on adversarial rows, regardless of whether it was the primary weakest constraint.
+
+| Prompt | Expected | Fired Constraints | # Fired | Expected Fired? |
+|--------|----------|-------------------|---------|-----------------|
+| hv1 | c1 | c1, c9 | 2 | YES |
+| hv2 | c2 | c10, c2 | 2 | YES |
+| hv3 | c3 | c10, c3, c4, c6, c7, c9 | 6 | YES |
+
+**Expected constraint fired rate:** 3/3 = 1.00
+
+---
+
 ## Verdict
 
-**✓ KEEP**
+### Detection
+**KEEP**
 
-- Adversarial signal is present and well-separated (judge gap = 0.2917).
-- Repeat stability is acceptable (avg prompt D std = 0.0471).
-- Constraint attribution match rate is adequate (0.67).
+- Judge gap = 0.2917 (>= 0.1 threshold).
+- Repeat stability OK: avg prompt D std = 0.0471.
+
+### Attribution
+**KEEP**
+
+- Attribution match rate 0.67 >= 0.6 threshold.
+
+### Co-Firing
+**KEEP**
+
+- Expected constraint fired in 1.00 of mapped prompts (>= 0.6 threshold).
+
+### Overall
+**KEEP**
+
+The overall verdict is the most conservative of the three sub-verdicts above.
 
 | Verdict | Meaning |
 |---------|---------|
