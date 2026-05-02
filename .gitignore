@@ -34,3 +34,7 @@ desktop.ini
 
 # Claude local settings
 .claude/
+
+# AOSL generated content stability audit reports
+04_RUNS/content_stability_auditor/content_audit_*.json
+04_RUNS/content_stability_auditor/content_audit_*.md
