@@ -59,6 +59,24 @@ ceiling. The ordering is consistent with the AOSL detection hypothesis.
 
 ---
 
+## Llama Run History
+
+The Llama result went through three passes before the 3-repeat baseline was established.
+
+| Run                   | Rows | Repeats | Mean D | Notes                                   |
+|-----------------------|------|---------|--------|-----------------------------------------|
+| Smoke (5 rows)        | 5    | 1       | —      | Initial viability check only            |
+| Full run (1 repeat)   | 30   | 1       | 0.0783 | First full-set pass; confirmed signal   |
+| Full run (3 repeats)  | 90   | 3       | 0.0722 | Main result; avg prompt std dev = 0.0197|
+
+The 1-repeat pass (mean D = 0.0783) confirmed the signal was present in a full 30-row
+run. The 3-repeat run (mean D = 0.0722) is the primary Llama pressured result used in
+this memo. The slight decrease from 0.0783 → 0.0722 across repeats mirrors the same
+pattern in DeepSeek (1-repeat: 0.1067 → 3-repeat: 0.0939): signals compress slightly
+under repeated scoring but do not collapse.
+
+---
+
 ## Divergence Gaps
 
 | Comparison                                          | Gap     |
@@ -169,6 +187,24 @@ generator model.
 
 - **Attribution remains weak.** Constraint-level scores should not yet be used for
   constraint-specific diagnostics on either generator.
+
+---
+
+## Preliminary Gemini Judge Signal
+
+An early run using `google/gemini-2.0-flash` as judge on Llama outputs produced a
+mean D of 0.1446 (28 scored rows, 2 errors due to 429 rate-limit responses). The
+two errored rows (v30_06, v30_22) were excluded from the mean.
+
+This run should not yet be treated as completed judge-independence evidence:
+- Two rows are missing due to provider rate limit errors — the run is incomplete.
+- Only 1 repeat; no prompt-level stability data exists.
+- Attribution match rate was 0.09, well below the 0.6 threshold.
+
+The preliminary signal (0.1446) is directionally consistent with elevated divergence
+on pressured Llama outputs, but a clean replication with 0 errors is required before
+any judge-independence conclusion can be drawn. File archived at:
+`04_RUNS/real_failure_validation_30/valid_baselines/real_failure_validation_30_llama_3_1_8b_1repeat_standard_gemini_2_0_flash_judge_2error_summary.txt`
 
 ---
 
