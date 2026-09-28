@@ -1,5 +1,7 @@
 # AOSL Next Steps
 
+> Historical Phase 1 notes. The placeholder-scoring tasks below predate the real-judge validation runs. For the later research status and remaining experiments, see [AOSL Evidence Memo v0.2](../07_DOCS/AOSL_EVIDENCE_MEMO_v0.2.md). Do not treat this checklist as the current project plan.
+
 ## Current State
 Prompt-file pipeline is verified end-to-end. Pilot1 workflow is complete. All runner scripts are working.
 

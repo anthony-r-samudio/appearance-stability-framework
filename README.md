@@ -52,10 +52,10 @@ D = average constraint violation rate. 0 means no violations detected. Both stab
 
 ### Caveats
 
-- **Not a truth detector.** AOSL flags structural divergence patterns, not factual errors. An output can score low D and still be factually wrong.
-- **Judge-dependent.** All results use `deepseek/deepseek-chat` as judge. Scores from other judges may differ.
+- **Not a truth detector.** AOSL includes a factual-grounding constraint, but a judge's score does not independently verify factual truth. An output can score low D and still be factually wrong.
+- **Judge-dependent.** The five evidence-ladder means above use `deepseek/deepseek-chat` as judge. A separate Gemini judge run is reported in [Evidence Memo v0.2](07_DOCS/AOSL_EVIDENCE_MEMO_v0.2.md); scores from different judges are not yet calibrated to a common scale.
 - **Constraint attribution is still weak.** Per-constraint scores (which C fired) are diagnostic signals, not reliable labels. Use aggregate D as the primary signal.
-- **Cross-judge evidence is exploratory.** A second judge has not yet confirmed the signal independently.
+- **Cross-judge evidence is exploratory.** A Gemini judge scored one 30-output Llama pressured condition with elevated divergence, but there is no Gemini-scored stable baseline or repeat series yet. See [Evidence Memo v0.2](07_DOCS/AOSL_EVIDENCE_MEMO_v0.2.md).
 - **Not production-ready.** This is a local research prototype with no auth, rate limiting, or persistent storage.
 - **Human review required for high-stakes use.** AOSL output is a screening signal, not a decision.
 
