@@ -61,6 +61,7 @@ D = average constraint violation rate. 0 means no violations detected. Both stab
 
 ### Internal documentation
 
+- [ASF / AOSL Source Map v0.1](07_DOCS/ASF_AOSL_SOURCE_MAP_v0.1.md) — source roles and incompatible scoring profiles
 - [AOSL Demo v0.2 Usage Note](07_DOCS/AOSL_DEMO_V0_1_NOTE.md) — full usage guide with workflows and interpretation
 - [Cross-Generator Validation Memo v0.1](07_DOCS/AOSL_CROSS_GENERATOR_VALIDATION_MEMO_v0.1.md) — evidence behind the five-level ladder
 
