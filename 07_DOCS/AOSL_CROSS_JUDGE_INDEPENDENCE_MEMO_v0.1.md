@@ -169,7 +169,7 @@ AOSL has now passed an initial cross-judge directional consistency test:
 - Two independent judges (DeepSeek and Gemini) both produce elevated Mean D on the same
   Llama pressured outputs.
 - Both judges identify C7 and C4 as the primary failure-detecting constraints.
-- The ordering stable < pressured is preserved under both judges.
+- The DeepSeek judge shows stable < pressured on its own scale. Gemini scored the pressured condition only; a Gemini-scored stable baseline is required to test this ordering within the second judge.
 
 It has not yet passed a cross-judge calibrated-scale test. The magnitude difference
 between judges (1.9×) remains unexplained without a shared stable baseline condition.

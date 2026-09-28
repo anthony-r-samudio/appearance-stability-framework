@@ -11,13 +11,18 @@
 | Status         | Early validation evidence — not production proof                                                |
 | Scope          | Controlled validation runs across stable, pressured, synthetic, cross-generator, and cross-judge conditions |
 
+**2026-09-28 clarification:** Gemini scored the pressured Llama outputs only. The
+stable-versus-pressured ordering has been shown within the DeepSeek judge, but not
+within Gemini. Values from different judges must not be compared as if they
+shared a calibrated scale.
+
 ---
 
 ## 1. Executive Summary
 
 AOSL now has early controlled evidence that divergence rises under structural pressure,
-appears across more than one generator model, and remains directionally elevated under a
-second independent judge model.
+appears across more than one generator model, and was also scored on pressured Llama
+outputs by a second independent judge model.
 
 This does not yet prove production readiness, naturalistic traffic performance, or reliable
 per-constraint attribution.
@@ -25,8 +30,8 @@ per-constraint attribution.
 Five conditions have now been scored in controlled tests. The results form a clean ordered
 separation from stable real outputs to intentionally flawed synthetic outputs. Two generator
 models (DeepSeek and Llama) both show elevated divergence under structural pressure, and a
-second judge model (Gemini) scores those same pressured Llama outputs at an elevated level
-relative to the known stable baselines.
+second judge model (Gemini) scores those same pressured Llama outputs. A matched
+Gemini-scored stable baseline is needed to test whether pressure elevates its scores.
 
 ---
 
@@ -39,8 +44,8 @@ DS stable  <  Llama stable  <  Llama pressured  <  DS pressured  <  synthetic fl
 
 All five points are ordered in the expected direction. Both pressured conditions sit above
 both stable baselines and below the synthetic flawed ceiling. This ordering is preserved
-across two generator models and is consistent with a second judge model on the Llama
-pressured condition.
+across two generator models under the DeepSeek judge. Separately, Gemini scored the
+pressured Llama outputs; that run does not test the ordering.
 
 ---
 
@@ -76,10 +81,10 @@ All DeepSeek-judge runs: cheap judge mode, 0 errors. Gemini-judge run: standard 
   divergence under pressure and near-zero divergence on stable prompts.
 
 - v0.2 adds an **initial zero-error Gemini judge run** on Llama pressured outputs
-  (30 rows, 0 errors, mean D = 0.1350). This is the first cross-judge directional result.
+  (30 rows, 0 errors, mean D = 0.1350). This is an exploratory second-judge observation.
 
 - v0.2 upgrades the status from "single-generator early evidence" to "early cross-generator
-  and directional cross-judge evidence."
+  evidence with an exploratory second-judge observation."
 
 ---
 
@@ -107,18 +112,17 @@ universality across all models or prompt types.
 
 ## 6. Cross-Judge Finding
 
-**Core claim: The pressured-real signal remains directionally elevated under an independent
-Gemini judge.**
+**Core observation: An independent Gemini judge scored the same pressured Llama outputs.**
 
 - DeepSeek judge on Llama pressured outputs (3-repeat): Mean D = 0.0722
 - Gemini judge on the same Llama pressured outputs (1-repeat): Mean D = 0.1350
 - Gemini scored all 30 rows with 0 errors.
-- Both judges produce Mean D well above the known stable baselines (0.0117 and 0.0250).
+- The known stable baselines (0.0117 and 0.0250) were scored by DeepSeek, not Gemini.
 
-Both judges agree in direction: Llama pressured outputs are divergent. The Gemini judge
-scores them approximately 1.9× higher than DeepSeek. This difference in magnitude is
-unresolved. No Gemini-scored stable baseline exists yet, so the Gemini scale cannot be
-normalized against a shared reference floor.
+Gemini scores these pressured outputs approximately 1.9× higher than DeepSeek.
+This difference in magnitude is unresolved. No Gemini-scored stable baseline exists,
+so the within-Gemini stable-versus-pressured direction and scale calibration
+remain untested.
 
 Both judges identify C7 (Uncertainty Acknowledgment) and C4 (Epistemic Calibration) as
 the primary failure-detecting constraints.
@@ -126,7 +130,8 @@ the primary failure-detecting constraints.
 Attribution match rates remain weak under both judges: DeepSeek 0.32, Gemini 0.08. Exact
 constraint routing should not be used for diagnostics under either judge at this stage.
 
-This is directional cross-judge evidence. It is not full judge-independence proof.
+This is an exploratory cross-judge observation, not a within-Gemini separation
+test or judge-independence proof.
 
 ---
 
@@ -138,8 +143,8 @@ This is directional cross-judge evidence. It is not full judge-independence proo
   models using the same judge.
 - The pressured-real signal appears across at least two generator models (DeepSeek and
   Llama 3.1 8B Instruct).
-- The pressured-real signal remains directionally elevated under a second judge model
-  (Gemini 2.0 Flash) with zero errors on all 30 rows.
+- A second judge model (Gemini 2.0 Flash) scored all 30 pressured Llama outputs
+  with zero errors; a Gemini stable baseline is needed to test separation.
 - Aggregate Mean D is more reliable than per-constraint attribution at this stage.
 - Repeat stability is acceptable: avg prompt std dev = 0.0197 (Llama pressured) and
   0.0281 (DeepSeek pressured), both within the 0.1 limit.
@@ -209,7 +214,8 @@ This is directional cross-judge evidence. It is not full judge-independence proo
 
 AOSL is showing early controlled evidence that structurally pressured AI outputs produce
 higher divergence than stable outputs. The signal now appears across DeepSeek and Llama
-generators and remains directionally elevated when judged by Gemini instead of DeepSeek.
+generators under a DeepSeek judge. Gemini scored the pressured Llama outputs, but has
+not yet scored a matched stable baseline to test the same ordering on its own scale.
 This is not production proof yet, but it is a meaningful validation step toward testing
 whether surface-fluent outputs can be systematically audited for structural instability.
 
@@ -217,8 +223,9 @@ whether surface-fluent outputs can be systematically audited for structural inst
 
 ```
 Version : v0.2
-Status  : early cross-generator and directional cross-judge evidence — not production proof
+Status  : early cross-generator evidence, exploratory second-judge observation — not production proof
 Scope   : two generators, two judges, two stable baselines, two pressured conditions, one synthetic set
 Updated : 2026-05-02
+Clarified : 2026-09-28 (cross-judge interpretation)
 Prior   : AOSL_EVIDENCE_MEMO_v0.1.md (single-generator, single-judge evidence)
 ```
