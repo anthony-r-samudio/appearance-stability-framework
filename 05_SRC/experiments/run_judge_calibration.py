@@ -62,9 +62,8 @@ from scoring.fast_batch_scorer import (
 # -- Paths ---------------------------------------------------------------------
 
 _DEFAULT_INPUT_CSV     = _REPO_ROOT / "04_RUNS" / "hard_validation" / "hard_validation_inputs.csv"
-OUT_DIR                = _REPO_ROOT / "04_RUNS" / "judge_calibration"
-CSV_PATH               = OUT_DIR / "judge_calibration_scores.csv"
-JSONL_PATH             = OUT_DIR / "judge_calibration_scores.jsonl"
+_DEFAULT_OUT_DIR       = _REPO_ROOT / "04_RUNS" / "judge_calibration"
+_DEFAULT_PREFIX        = "judge_calibration"
 _BOUNDARY_COMPACT_PATH = _REPO_ROOT / "01_CANON" / "AOSL_JUDGE_BOUNDARY_COMPACT_v0.1.md"
 _BOUNDARY_FULL_PATH    = _REPO_ROOT / "01_CANON" / "AOSL_CONSTRAINT_BOUNDARY_NOTES_v0.1.md"
 
@@ -103,16 +102,16 @@ def _load_boundary_notes() -> str:
 
 # -- Resume helpers ------------------------------------------------------------
 
-def _load_existing_scored_rows() -> list:
+def _load_existing_scored_rows(csv_path: Path) -> list:
     """
-    Read existing scored rows from CSV_PATH (if it exists).
+    Read existing scored rows from *csv_path* (if it exists).
     Returns a list of dicts, or [] if the file is missing or empty.
     """
-    if not CSV_PATH.exists():
+    if not csv_path.exists():
         return []
     rows = []
     try:
-        with open(CSV_PATH, newline="", encoding="utf-8") as f:
+        with open(csv_path, newline="", encoding="utf-8") as f:
             reader = csv.DictReader(f)
             for row in reader:
                 rows.append(dict(row))
@@ -202,7 +201,19 @@ def main(
     no_boundary_notes:   bool         = False,
     resume:              bool         = False,
     input_csv:           "Path | None" = None,
+    output_dir:          "Path | None" = None,
+    output_prefix:       "str | None"  = None,
 ) -> None:
+
+    # -- Resolve output paths: explicit args > module defaults -----------------
+    out_dir = Path(output_dir) if output_dir else _DEFAULT_OUT_DIR
+    if not out_dir.is_absolute():
+        out_dir = _REPO_ROOT / out_dir
+    out_dir = out_dir.resolve()
+
+    prefix = output_prefix if output_prefix else _DEFAULT_PREFIX
+    csv_path  = out_dir / f"{prefix}_scores.csv"
+    jsonl_path = out_dir / f"{prefix}_scores.jsonl"
 
     # -- Resolve input_csv: explicit arg > module default ---------------------
     if input_csv is None:
@@ -223,8 +234,17 @@ def main(
     if no_boundary_notes:
         print("  [boundary notes] Disabled via --no-boundary-notes")
         boundary_notes = ""
+        boundary_notes_file = ""
     else:
         boundary_notes = _load_boundary_notes()
+        boundary_notes_file = ""
+        for _p in (_BOUNDARY_COMPACT_PATH, _BOUNDARY_FULL_PATH):
+            if _p.exists():
+                try:
+                    boundary_notes_file = str(_p.relative_to(_REPO_ROOT))
+                except ValueError:
+                    boundary_notes_file = _p.name
+                break
 
     print("=" * 60)
     print("AOSL Judge Calibration Runner")
@@ -250,7 +270,10 @@ def main(
     print(f"  dry run        : {'yes (no API calls, no file writes)' if dry_run else 'no'}")
     print(f"  resume         : {'yes' if resume else 'no'}")
     print(f"  on error       : {'continue' if continue_on_error else 'abort'}")
-    print(f"  outputs        : {OUT_DIR}")
+    print(f"  output dir     : {out_dir}")
+    print(f"  output prefix  : {prefix}")
+    print(f"  CSV path       : {csv_path}")
+    print(f"  JSONL path     : {jsonl_path}")
     print("=" * 60)
     print()
 
@@ -292,7 +315,7 @@ def main(
     existing_rows = []
     already_done  = set()
     if resume:
-        existing_rows = _load_existing_scored_rows()
+        existing_rows = _load_existing_scored_rows(csv_path)
         already_done  = _build_already_done_set(existing_rows)
         print(f"  [resume] Existing successful results: {len(already_done)}")
 
@@ -367,6 +390,15 @@ def main(
     print(f"Total judge calls planned: {total_calls}  ({len(rows)} rows x {repeats} repeats)")
     print()
 
+    # -- Judge provenance fields (attached to every scored/error row) ----------
+    _provenance = {
+        "judge_model":         judge_model,
+        "judge_temperature":   0.0,
+        "max_tokens":          max_tokens,
+        "cost_mode":           cost_mode,
+        "boundary_notes_file": boundary_notes_file,
+    }
+
     # -- Score loop: outer = repeats, inner = rows ----------------------------
     all_scored   = list(existing_rows)   # start with pre-existing rows if resuming
     new_scored   = []
@@ -422,12 +454,14 @@ def main(
                     sys.exit(1)
 
                 error_row = _make_error_row(row, short_err, rpt)
+                error_row.update(_provenance)
                 _print_row_result(i, n_rows, error_row)
                 new_scored.append(error_row)
                 all_scored.append(error_row)
 
             else:
                 result["calibration_repeat"] = rpt
+                result.update(_provenance)
                 _print_ok_scores(result)
                 _print_row_result(i, n_rows, result)
                 new_scored.append(result)
@@ -447,13 +481,13 @@ def main(
 
     # -- Save (all_scored = existing + new, overwrites file with full set) ----
     print(f"Saving {len(all_scored)} total row(s) ({len(new_scored)} new)...")
-    save_outputs(all_scored, CSV_PATH, JSONL_PATH)
+    save_outputs(all_scored, csv_path, jsonl_path)
 
     print()
     print("=" * 60)
     print("Output files:")
-    print(f"  CSV   : {CSV_PATH}")
-    print(f"  JSONL : {JSONL_PATH}")
+    print(f"  CSV   : {csv_path}")
+    print(f"  JSONL : {jsonl_path}")
     print("=" * 60)
     print()
     print("Run the summary script next:")
@@ -562,6 +596,26 @@ if __name__ == "__main__":
         default=False,
         help="Load existing output CSV and skip prompt_id+repeat pairs already successfully scored.",
     )
+    parser.add_argument(
+        "--output-dir",
+        default=None,
+        metavar="PATH",
+        dest="output_dir",
+        help=(
+            "Directory for output CSV/JSONL. Relative paths resolve from repo root. "
+            f"Default: {_DEFAULT_OUT_DIR.relative_to(_REPO_ROOT)}"
+        ),
+    )
+    parser.add_argument(
+        "--output-prefix",
+        default=None,
+        metavar="NAME",
+        dest="output_prefix",
+        help=(
+            "Filename prefix for output files (<prefix>_scores.csv, <prefix>_scores.jsonl). "
+            f"Default: {_DEFAULT_PREFIX}"
+        ),
+    )
     parser.set_defaults(continue_on_error=True)
     args = parser.parse_args()
     main(
@@ -579,4 +633,6 @@ if __name__ == "__main__":
         no_boundary_notes   = args.no_boundary_notes,
         resume              = args.resume,
         input_csv           = args.input_csv,
+        output_dir          = args.output_dir,
+        output_prefix       = args.output_prefix,
     )

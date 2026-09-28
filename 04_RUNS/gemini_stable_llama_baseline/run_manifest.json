@@ -1,0 +1,77 @@
+{
+  "experiment": "gemini-stable-llama-baseline",
+  "purpose": "Matched Gemini-judged stable baseline for Llama outputs, paired with existing pressured Gemini run to test whether pressure elevates Gemini scores",
+
+  "source_branch": "experiment/gemini-stable-llama-baseline",
+  "base_branch": "origin/experimental-fast-batch-scoring",
+  "base_commit": "b1dc6f0ef575215a2e63135fdf997a117d26d809",
+
+  "input": {
+    "source_path": "04_RUNS/real_model_validation_30/real_model_validation_30_outputs.csv",
+    "frozen_path": "04_RUNS/gemini_stable_llama_baseline/frozen_input/real_model_validation_30_outputs_llama_3_1_8b.csv",
+    "row_count": 30,
+    "unique_prompt_ids": 30,
+    "generator_model": "meta-llama/llama-3.1-8b-instruct",
+    "generator_temperature": 0.7,
+    "repeats_in_input": 1,
+    "sha256": "5948fb55caff622c442ef642d13283fc96f1ca2fbd8f1a91ddbfd8ab55bb6a98",
+    "confidence": "VERIFIED FROM SOURCE"
+  },
+
+  "judge_config": {
+    "judge_model": {
+      "value": "google/gemini-2.0-flash-001",
+      "confidence": "VERIFIED FROM EXECUTION CONFIG — this run will explicitly pass --judge-model google/gemini-2.0-flash-001; equivalence to pressured run judge is INFERRED FROM FILENAME/MEMO because pressured JSONL judge_model field is null"
+    },
+    "judge_temperature": {
+      "value": 0.0,
+      "confidence": "VERIFIED FROM SOURCE — hardcoded in fast_batch_scorer.py line 345"
+    },
+    "repeats": {
+      "value": 1,
+      "confidence": "VERIFIED — matches pressured run (30 JSONL rows, calibration_repeat=1)"
+    },
+    "cost_mode": {
+      "value": "standard",
+      "confidence": "INFERRED FROM FILENAME — pressured run filename contains 'standard'; evidence memo confirms 800 max tokens"
+    },
+    "max_tokens": {
+      "value": 800,
+      "confidence": "VERIFIED FROM SOURCE — standard cost_mode maps to 800 in run_judge_calibration.py"
+    },
+    "boundary_notes": {
+      "value": "enabled",
+      "file": "01_CANON/AOSL_JUDGE_BOUNDARY_COMPACT_v0.1.md",
+      "confidence": "INFERRED — default behavior is enabled; no evidence --no-boundary-notes was used for pressured run"
+    },
+    "scorer_tag": {
+      "value": "real-judge-v1",
+      "confidence": "VERIFIED FROM RAW RESULT — pressured run JSONL scorer field"
+    }
+  },
+
+  "rubric_path": "01_CANON/AOSL_JUDGE_BOUNDARY_COMPACT_v0.1.md",
+  "scorer_script_path": "05_SRC/scoring/fast_batch_scorer.py",
+  "runner_script_path": "05_SRC/experiments/run_judge_calibration.py",
+
+  "execution_command": "py 05_SRC\\experiments\\run_judge_calibration.py --input-csv 04_RUNS\\gemini_stable_llama_baseline\\frozen_input\\real_model_validation_30_outputs_llama_3_1_8b.csv --judge-model google/gemini-2.0-flash-001 --cost-mode standard --max-tokens 800 --repeats 1 --timeout 60 --retries 1 --output-dir 04_RUNS\\gemini_stable_llama_baseline --output-prefix gemini_stable_llama_baseline",
+
+  "output_paths": {
+    "csv": "04_RUNS/gemini_stable_llama_baseline/gemini_stable_llama_baseline_scores.csv",
+    "jsonl": "04_RUNS/gemini_stable_llama_baseline/gemini_stable_llama_baseline_scores.jsonl",
+    "summary": "04_RUNS/gemini_stable_llama_baseline/gemini_stable_llama_baseline_summary.txt",
+    "comparison": "04_RUNS/gemini_stable_llama_baseline/comparison_stable_vs_pressured.md"
+  },
+
+  "paired_pressured_run": {
+    "path": "04_RUNS/real_failure_validation_30/valid_baselines/real_failure_validation_30_llama_3_1_8b_1repeat_standard_gemini_2_0_flash_001_judge",
+    "mean_divergence": 0.1350,
+    "row_count": 30,
+    "judge_model": {
+      "value": "google/gemini-2.0-flash-001",
+      "confidence": "INFERRED FROM FILENAME/MEMO — judge_model field in JSONL is null"
+    }
+  },
+
+  "timestamp": "PLACEHOLDER — set at execution time"
+}
