@@ -1,0 +1,59 @@
+﻿{
+    "experiment":  "gemini-2.5-matched-llama-t07",
+    "purpose":  "Matched-temperature stable vs structurally pressured Llama 3.1 8B comparison scored by Gemini 2.5 Flash",
+    "git":  {
+                "branch":  "experiment/gemini-stable-llama-baseline",
+                "commit":  "8685be1d1824da485e93a8c80d1ec61c359fe462"
+            },
+    "generation":  {
+                       "model":  "meta-llama/llama-3.1-8b-instruct",
+                       "temperature":  0.7,
+                       "max_tokens":  500,
+                       "repeat":  1,
+                       "stable_rows":  30,
+                       "pressured_rows":  30
+                   },
+    "inputs":  {
+                   "stable":  {
+                                  "path":  "04_RUNS/real_model_validation_30/real_model_validation_30_outputs_llama_3_1_8b_t07_matched.csv",
+                                  "sha256":  "20E956D0DCE6E54A0DEDBE74819683BE810E9EE1FDF1E60B217D3D7863BF6F3D"
+                              },
+                   "pressured":  {
+                                     "path":  "04_RUNS/real_failure_validation_30/real_failure_validation_30_outputs_llama_3_1_8b_t07_matched_clean.csv",
+                                     "sha256":  "0F9886F3EFCC7224206A039E2D7AAA682452EF524BC4FF713A9E1D4683C6AB54"
+                                 },
+                   "raw_resume_provenance":  {
+                                                 "path":  "04_RUNS/real_failure_validation_30/real_failure_validation_30_outputs_llama_3_1_8b_t07_matched_raw_resume33.csv",
+                                                 "note":  "Raw 33-row file preserved after resume appended three successful retries without replacing three prior error rows."
+                                             }
+               },
+    "judge":  {
+                  "model":  "google/gemini-2.5-flash",
+                  "temperature":  0,
+                  "repeats":  1,
+                  "max_tokens":  800,
+                  "cost_mode":  "standard",
+                  "timeout_seconds":  60,
+                  "retries":  1,
+                  "boundary_notes":  "01_CANON/AOSL_JUDGE_BOUNDARY_COMPACT_v0.1.md",
+                  "scorer":  "real-judge-v1"
+              },
+    "outputs":  {
+                    "stable_scores":  {
+                                          "path":  "04_RUNS/gemini_2_5_matched_llama_t07/gemini_2_5_stable_llama_t07_scores.csv",
+                                          "rows":  30,
+                                          "sha256":  "29EB9D576F1F001BCB029718BAEEB05245092AD91E5D70008C0DED5281E1B155"
+                                      },
+                    "pressured_scores":  {
+                                             "path":  "04_RUNS/gemini_2_5_matched_llama_t07/gemini_2_5_pressured_llama_t07_scores.csv",
+                                             "rows":  30,
+                                             "sha256":  "1EC9F12D994FA4C5DD8EDCBA4DDB559251B593069EBD4F85BBC5CD198FB05DF4"
+                                         }
+                },
+    "known_limitations":  [
+                              "One judge pass per output; judge repeatability is not estimated.",
+                              "Stable and pressured prompts differ by experimental design, so pairing is by matched prompt_id and failure-focus family rather than identical prompt text.",
+                              "Three pressured generation calls initially failed due to connection errors and were retried; the original 33-row resume artifact is preserved.",
+                              "The generator resume implementation currently appends successful retries without removing prior failed rows."
+                          ]
+}
