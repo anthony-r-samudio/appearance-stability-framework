@@ -54,6 +54,6 @@
                               "One judge pass per output; judge repeatability is not estimated.",
                               "Stable and pressured prompts differ by experimental design, so pairing is by matched prompt_id and failure-focus family rather than identical prompt text.",
                               "Three pressured generation calls initially failed due to connection errors and were retried; the original 33-row resume artifact is preserved.",
-                              "The generator resume implementation currently appends successful retries without removing prior failed rows."
+                              "At the time of this run, the pressured generator resume implementation appended successful retries without removing prior failed rows; the raw 33-row artifact is preserved as provenance."
                           ]
 }

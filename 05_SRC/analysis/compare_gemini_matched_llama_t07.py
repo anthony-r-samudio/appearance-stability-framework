@@ -1,6 +1,7 @@
 ﻿import csv
 import math
 import statistics
+from collections import Counter
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -23,6 +24,24 @@ def get_d(row):
 
 stable_rows = load(STABLE)
 pressured_rows = load(PRESSURED)
+
+integrity_errors = []
+for label, rows in (("stable", stable_rows), ("pressured", pressured_rows)):
+    if len(rows) != 30:
+        integrity_errors.append(f"{label} CSV: expected exactly 30 rows, found {len(rows)}")
+    counts = Counter(r["prompt_id"] for r in rows)
+    duplicates = sorted(pid for pid, count in counts.items() if count > 1)
+    if duplicates:
+        integrity_errors.append(f"{label} CSV: duplicate prompt_ids: {duplicates}")
+stable_ids = {r["prompt_id"] for r in stable_rows}
+pressured_ids = {r["prompt_id"] for r in pressured_rows}
+if stable_ids != pressured_ids:
+    integrity_errors.append(
+        f"prompt_id sets differ: missing from pressured: {sorted(stable_ids - pressured_ids)}; "
+        f"extra in pressured: {sorted(pressured_ids - stable_ids)}"
+    )
+if integrity_errors:
+    raise RuntimeError("; ".join(integrity_errors))
 
 stable = {r["prompt_id"]: r for r in stable_rows}
 pressured = {r["prompt_id"]: r for r in pressured_rows}
