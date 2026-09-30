@@ -317,6 +317,18 @@ def main(
             "expected_failure_focus": focus,
         }
         new_rows.append(row)
+        if resume:
+            # Replace prior failures only once a retry result is available.
+            all_rows = [
+                existing for existing in all_rows
+                if not (
+                    str(existing.get("prompt_id", "")).strip() == pid.strip()
+                    and (
+                        not str(existing.get("output_text", "")).strip()
+                        or str(existing.get("output_text", "")).strip().startswith("[ERROR")
+                    )
+                )
+            ]
         all_rows.append(row)
 
         if status == "credit_error":
