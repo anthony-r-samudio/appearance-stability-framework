@@ -193,9 +193,10 @@ def _section_d(lines: list, ok: pd.DataFrame, present: list) -> None:
     prompt_stds = ok.groupby("prompt_id")["divergence"].std().dropna()
     avg_std = prompt_stds.mean() if not prompt_stds.empty else float("nan")
 
-    lines.append(f"    Avg prompt-level D std dev  : {_f(avg_std)}")
+    lines.append(f"    Avg prompt-level D std dev  : {_f(avg_std) if not pd.isna(avg_std) else 'N/A'}")
     stability_label = (
-        "acceptable initial stability" if avg_std <= 0.10
+        "not measurable — requires at least 2 repeats" if pd.isna(avg_std)
+        else "acceptable initial stability" if avg_std <= 0.10
         else "moderate instability — rubric tightening recommended" if avg_std <= 0.20
         else "high instability — judge/rubric recalibration required"
     )
@@ -326,7 +327,7 @@ def _section_f(lines: list, ok: pd.DataFrame, judge_gap: "float | None", present
     avg_prompt_std = float("nan")
     if "prompt_id" in ok.columns and not ok.empty:
         prompt_stds = ok.groupby("prompt_id")["divergence"].std().dropna()
-        avg_prompt_std = prompt_stds.mean() if not prompt_stds.empty else 0.0
+        avg_prompt_std = prompt_stds.mean() if not prompt_stds.empty else float("nan")
 
     # Per-prompt per-constraint std dev — find max and count drifty pairs
     max_constraint_drift = 0.0
@@ -366,8 +367,8 @@ def _section_f(lines: list, ok: pd.DataFrame, judge_gap: "float | None", present
     std_ok  = not pd.isna(avg_prompt_std)
     gap_ok  = judge_gap is not None
 
-    lines.append(f"    Avg prompt repeat std dev       : {_f(avg_prompt_std)}  (limit={_REPEAT_STD_LIMIT})")
-    lines.append(f"    Max per-prompt constraint drift : {_f(max_constraint_drift)}  (limit={_CONSTRAINT_DRIFT_LIMIT})")
+    lines.append(f"    Avg prompt repeat std dev       : {_f(avg_prompt_std) if std_ok else 'N/A'}  (limit={_REPEAT_STD_LIMIT})")
+    lines.append(f"    Max per-prompt constraint drift : {_f(max_constraint_drift) if std_ok else 'N/A'}  (limit={_CONSTRAINT_DRIFT_LIMIT})")
     lines.append(
         f"    Attribution match rate          : {_f(match_rate, 2)}"
         f"  ({match_count} MATCH / {mismatch_count} MISMATCH / {total_mapped} mapped)"
@@ -380,7 +381,13 @@ def _section_f(lines: list, ok: pd.DataFrame, judge_gap: "float | None", present
 
     # --- Verdict rules (evaluated in priority order) --------------------------
 
-    if std_ok and avg_prompt_std > _REPEAT_STD_LIMIT:
+    if not std_ok:
+        verdict = "DO_NOT_SCALE_YET"
+        reason = (
+            "Repeatability is not measurable — requires at least 2 repeats. "
+            "Collect at least 2 successful repeat observations per prompt before scaling."
+        )
+    elif avg_prompt_std > _REPEAT_STD_LIMIT:
         verdict = "DO_NOT_SCALE_YET"
         reason  = (
             f"Repeat instability too high "

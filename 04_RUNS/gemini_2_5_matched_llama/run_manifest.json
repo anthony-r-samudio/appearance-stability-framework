@@ -1,0 +1,102 @@
+{
+  "experiment": "gemini-2.5-matched-llama",
+  "purpose": "Matched Gemini 2.5 Flash judge comparison: stable vs pressured Llama outputs scored under identical judge configuration, establishing whether structural pressure elevates divergence within a single judge's scale",
+
+  "source_branch": "experiment/gemini-stable-llama-baseline",
+  "base_branch": "origin/experimental-fast-batch-scoring",
+  "base_commit": "b1dc6f0ef575215a2e63135fdf997a117d26d809",
+
+  "design_note": "google/gemini-2.0-flash-001 is retired/unavailable. The historical Gemini 2.0 pressured result (04_RUNS/real_failure_validation_30/valid_baselines/real_failure_validation_30_llama_3_1_8b_1repeat_standard_gemini_2_0_flash_001_judge.*) is preserved as archival evidence only and is NOT the matched comparator for this experiment. Both sides of this comparison use google/gemini-2.5-flash.",
+
+  "inputs": {
+    "stable": {
+      "source_path": "04_RUNS/real_model_validation_30/real_model_validation_30_outputs.csv",
+      "frozen_path": "04_RUNS/gemini_2_5_matched_llama/frozen_input/stable_llama.csv",
+      "row_count": 30,
+      "unique_prompt_ids": 30,
+      "generator_model": "meta-llama/llama-3.1-8b-instruct",
+      "generator_temperature": 0.7,
+      "repeats_in_input": 1,
+      "sha256": "5948fb55caff622c442ef642d13283fc96f1ca2fbd8f1a91ddbfd8ab55bb6a98",
+      "confidence": "VERIFIED FROM SOURCE"
+    },
+    "pressured": {
+      "source_path": "04_RUNS/real_failure_validation_30/real_failure_validation_30_outputs_llama_3_1_8b.csv",
+      "frozen_path": "04_RUNS/gemini_2_5_matched_llama/frozen_input/pressured_llama.csv",
+      "row_count": 30,
+      "unique_prompt_ids": 30,
+      "generator_model": "meta-llama/llama-3.1-8b-instruct",
+      "generator_temperature": 0.9,
+      "repeats_in_input": 1,
+      "sha256": "4a84d9750aa384ff3d2c758c9238f5d4a1e712377d66f7781078ef162154fc79",
+      "confidence": "VERIFIED FROM SOURCE",
+      "note": "Same 30 outputs previously scored by the retired google/gemini-2.0-flash-001 judge"
+    }
+  },
+
+  "judge_config": {
+    "judge_model": {
+      "value": "google/gemini-2.5-flash",
+      "confidence": "VERIFIED FROM EXECUTION CONFIG — both stable and pressured runs will explicitly pass --judge-model google/gemini-2.5-flash"
+    },
+    "judge_temperature": {
+      "value": 0.0,
+      "confidence": "VERIFIED FROM SOURCE — hardcoded in fast_batch_scorer.py line 345"
+    },
+    "repeats": {
+      "value": 1,
+      "confidence": "SPECIFIED BY EXPERIMENT DESIGN"
+    },
+    "cost_mode": {
+      "value": "standard",
+      "confidence": "SPECIFIED BY EXPERIMENT DESIGN"
+    },
+    "max_tokens": {
+      "value": 800,
+      "confidence": "SPECIFIED BY EXPERIMENT DESIGN — explicit via --max-tokens 800"
+    },
+    "boundary_notes": {
+      "value": "enabled",
+      "file": "01_CANON/AOSL_JUDGE_BOUNDARY_COMPACT_v0.1.md",
+      "confidence": "VERIFIED FROM SOURCE — default behavior loads this file"
+    },
+    "scorer_tag": {
+      "value": "real-judge-v1",
+      "confidence": "VERIFIED FROM SOURCE — set in fast_batch_scorer.py"
+    }
+  },
+
+  "rubric_path": "01_CANON/AOSL_JUDGE_BOUNDARY_COMPACT_v0.1.md",
+  "scorer_script_path": "05_SRC/scoring/fast_batch_scorer.py",
+  "runner_script_path": "05_SRC/experiments/run_judge_calibration.py",
+
+  "execution_commands": {
+    "stable": "py 05_SRC\\experiments\\run_judge_calibration.py --input-csv 04_RUNS\\gemini_2_5_matched_llama\\frozen_input\\stable_llama.csv --judge-model google/gemini-2.5-flash --cost-mode standard --max-tokens 800 --repeats 1 --timeout 60 --retries 1 --output-dir 04_RUNS\\gemini_2_5_matched_llama --output-prefix gemini_2_5_stable_llama",
+    "pressured": "py 05_SRC\\experiments\\run_judge_calibration.py --input-csv 04_RUNS\\gemini_2_5_matched_llama\\frozen_input\\pressured_llama.csv --judge-model google/gemini-2.5-flash --cost-mode standard --max-tokens 800 --repeats 1 --timeout 60 --retries 1 --output-dir 04_RUNS\\gemini_2_5_matched_llama --output-prefix gemini_2_5_pressured_llama"
+  },
+
+  "output_paths": {
+    "stable_csv": "04_RUNS/gemini_2_5_matched_llama/gemini_2_5_stable_llama_scores.csv",
+    "stable_jsonl": "04_RUNS/gemini_2_5_matched_llama/gemini_2_5_stable_llama_scores.jsonl",
+    "stable_summary": "04_RUNS/gemini_2_5_matched_llama/gemini_2_5_stable_llama_summary.txt",
+    "pressured_csv": "04_RUNS/gemini_2_5_matched_llama/gemini_2_5_pressured_llama_scores.csv",
+    "pressured_jsonl": "04_RUNS/gemini_2_5_matched_llama/gemini_2_5_pressured_llama_scores.jsonl",
+    "pressured_summary": "04_RUNS/gemini_2_5_matched_llama/gemini_2_5_pressured_llama_summary.txt",
+    "comparison": "04_RUNS/gemini_2_5_matched_llama/comparison_stable_vs_pressured.md"
+  },
+
+  "archival_reference": {
+    "gemini_2_0_pressured_run": {
+      "path": "04_RUNS/real_failure_validation_30/valid_baselines/real_failure_validation_30_llama_3_1_8b_1repeat_standard_gemini_2_0_flash_001_judge",
+      "mean_divergence": 0.1350,
+      "row_count": 30,
+      "judge_model": {
+        "value": "google/gemini-2.0-flash-001",
+        "confidence": "INFERRED FROM FILENAME/MEMO — judge_model field in JSONL is null"
+      },
+      "status": "ARCHIVAL ONLY — model retired, not the matched comparator"
+    }
+  },
+
+  "timestamp": "PLACEHOLDER — set at execution time"
+}
