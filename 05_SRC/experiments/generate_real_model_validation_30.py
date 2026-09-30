@@ -22,6 +22,9 @@ Generate all 30 rows:
 Resume after interruption:
     py 05_SRC/experiments/generate_real_model_validation_30.py --resume
 
+Generate to a separate output file:
+    py 05_SRC/experiments/generate_real_model_validation_30.py --output-suffix second_run
+
 Score the outputs:
     py 05_SRC/experiments/run_judge_calibration.py \\
         --input-csv 04_RUNS/real_model_validation_30/real_model_validation_30_outputs.csv \\
@@ -31,6 +34,7 @@ Score the outputs:
 import argparse
 import csv
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -76,6 +80,24 @@ _OUTPUT_FIELDS = [
 
 # -- Helpers -------------------------------------------------------------------
 
+def _sanitize_suffix(suffix: str) -> str:
+    """Make suffix safe for Windows filenames: lowercase, replace separators."""
+    s = suffix.lower()
+    s = re.sub(r'[/\\: ]+', '_', s)
+    return s
+
+
+def _resolve_output_csv(output_suffix: "str | None") -> Path:
+    """Return the output CSV path, incorporating suffix if provided."""
+    if not output_suffix:
+        return _OUTPUT_CSV
+    safe = _sanitize_suffix(output_suffix)
+    return (
+        _REPO_ROOT / "04_RUNS" / "real_model_validation_30"
+        / f"real_model_validation_30_outputs_{safe}.csv"
+    )
+
+
 def _check_api_key() -> None:
     if not os.getenv("OPENROUTER_API_KEY"):
         raise EnvironmentError(
@@ -94,11 +116,11 @@ def _load_prompts() -> list:
         return list(csv.DictReader(f))
 
 
-def _load_existing_outputs() -> list:
-    if not _OUTPUT_CSV.exists():
+def _load_existing_outputs(path: Path) -> list:
+    if not path.exists():
         return []
     try:
-        with open(_OUTPUT_CSV, newline="", encoding="utf-8") as f:
+        with open(path, newline="", encoding="utf-8") as f:
             return list(csv.DictReader(f))
     except Exception as exc:
         print(f"  [resume] WARNING: could not read existing outputs: {exc}")
@@ -136,12 +158,15 @@ def main(
     chunk_size:    "int | None" = None,
     resume:        bool         = False,
     dry_run:       bool         = False,
+    output_suffix: "str | None" = None,
 ) -> None:
+
+    output_csv = _resolve_output_csv(output_suffix)
 
     print("=" * 60)
     print("AOSL Real Model Validation 30 — Generator")
     print(f"  prompts        : {_PROMPTS_CSV}")
-    print(f"  output         : {_OUTPUT_CSV}")
+    print(f"  output         : {output_csv}")
     print(f"  model          : {model}")
     print(f"  temperature    : {temperature}")
     print(f"  max_tokens     : {max_tokens}")
@@ -188,7 +213,7 @@ def main(
     existing_rows = []
     already_done  = set()
     if resume:
-        existing_rows = _load_existing_outputs()
+        existing_rows = _load_existing_outputs(output_csv)
         already_done  = _build_done_set(existing_rows)
         print(f"  [resume] Existing successful outputs: {len(already_done)}")
 
@@ -219,6 +244,7 @@ def main(
         print(f"  model                : {model}")
         print(f"  temperature          : {temperature}")
         print(f"  max_tokens           : {max_tokens}")
+        print(f"  output file          : {output_csv}")
         print()
         if resume and live_calls == 0:
             print("Resume dry-run: all selected prompts are already successfully generated. No live calls needed.")
@@ -294,15 +320,16 @@ def main(
         return
 
     print(f"Saving {len(all_rows)} total row(s) ({len(new_rows)} new) to:")
-    print(f"  {_OUTPUT_CSV}")
-    _save_csv(all_rows, _OUTPUT_CSV)
+    print(f"  {output_csv}")
+    _save_csv(all_rows, output_csv)
 
     print()
     print("=" * 60)
     print("Done. Score with:")
+    rel_out = output_csv.relative_to(_REPO_ROOT)
     print(
         "  py 05_SRC/experiments/run_judge_calibration.py \\\n"
-        "      --input-csv 04_RUNS/real_model_validation_30/real_model_validation_30_outputs.csv \\\n"
+        f"      --input-csv {rel_out.as_posix()} \\\n"
         "      --dry-run"
     )
     print("=" * 60)
@@ -374,6 +401,18 @@ if __name__ == "__main__":
         default=False,
         help="Print generation plan without making any API calls or writing output.",
     )
+    parser.add_argument(
+        "--output-suffix",
+        default=None,
+        metavar="SUFFIX",
+        dest="output_suffix",
+        help=(
+            "Append a suffix to the output filename. "
+            "Writes to real_model_validation_30_outputs_<suffix>.csv. "
+            "Useful for running different generator models without overwriting existing outputs. "
+            "Characters / \\ : and spaces are replaced with underscores and lowercased."
+        ),
+    )
     args = parser.parse_args()
     main(
         model       = args.model,
@@ -385,4 +424,5 @@ if __name__ == "__main__":
         chunk_size  = args.chunk_size,
         resume      = args.resume,
         dry_run     = args.dry_run,
+        output_suffix = args.output_suffix,
     )
