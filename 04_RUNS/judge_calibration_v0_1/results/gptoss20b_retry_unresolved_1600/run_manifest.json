@@ -1,0 +1,29 @@
+{
+  "profile": "ollama-native-json-strict-v1",
+  "purpose": "local integration pilot; not calibrated evidence",
+  "created_utc": "2026-10-03T20:55:30.875302+00:00",
+  "source_commit": "b160841d78ea22aae4c908d571ef011aeb8dc77e",
+  "git_status": "?? 04_RUNS/judge_calibration_v0_1/results/retry_unresolved_input_v0_1.csv\n",
+  "input_csv": "C:\\Users\\ZBOOK\\Documents\\GitHub\\aosl-localjudge-zbook\\04_RUNS\\judge_calibration_v0_1\\results\\retry_unresolved_input_v0_1.csv",
+  "input_sha256": "6483720623bafa959883cef87f00973dac4be5fc66b69cd0b09215f4f40df94c",
+  "input_rows": 2,
+  "selected_rows": 2,
+  "selection": "first N rows in file order",
+  "output_dir": "C:\\Users\\ZBOOK\\Documents\\GitHub\\aosl-localjudge-zbook\\04_RUNS\\judge_calibration_v0_1\\results\\gptoss20b_retry_unresolved_1600",
+  "base_url": "http://localhost:11434",
+  "judge_model": "gpt-oss:20b",
+  "temperature": 0.0,
+  "max_tokens": 1600,
+  "num_ctx": 8192,
+  "timeout_seconds": 600.0,
+  "repeats": 1,
+  "retries": 0,
+  "format": "json",
+  "boundary_notes_sha256": "d3c4c1d640f5012eab8edd1d3788f0e6f39fabbc96280a5b9a2177f8eec6da81",
+  "prompt_sha256": [
+    "7f5d2c1a7b4a821a1180770233d29c1c5412f52ea0a08b49c9574d433e04fcd3",
+    "ff195a6d1ea69925a4ed15ebccf66226657471ff24df327b5114e6470753f288"
+  ],
+  "runner_sha256": "9f799992f48f0f3683cfe418748ccc88769e37a62a0f9f9de2fc6f23f3d86db4",
+  "scorer_sha256": "c9b018fdc67af4f4a6275a2331e80226d86b25f8dd9c82c6e961fd1123a35433"
+}
