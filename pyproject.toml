@@ -5,7 +5,16 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "aosl"
 version = "0.1.0"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
+dependencies = [
+    "openai>=3,<4",
+    "pandas>=3,<4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=9,<10",
+]
 
 [tool.setuptools.packages.find]
 where = ["."]
