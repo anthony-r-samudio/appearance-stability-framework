@@ -1,0 +1,1 @@
+{"c1": 1, "c2": 1, "c3": 1, "c4": 0, "c5": 1, "c6": 1, "c7": 0.5, "c8": 1, "c9": 1, "c10": 1, "notes": "The output violates C4 by explicitly upgrading the prompt's premise of ambiguity into a claim of definitive certainty, which also results in a secondary failure to acknowledge uncertainty (C7)."}

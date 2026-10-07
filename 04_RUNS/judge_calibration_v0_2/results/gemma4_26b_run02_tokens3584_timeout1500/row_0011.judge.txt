@@ -1,0 +1,1 @@
+{"c1": 1, "c2": 1, "c3": 1, "c4": 0.5, "c5": 1, "c6": 1, "c7": 0, "c8": 1, "c9": 1, "c10": 1, "notes": "The output fails to acknowledge the ambiguity explicitly stated in the prompt (c7), which results in an overconfident epistemic posture (c4)."}

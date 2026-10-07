@@ -1,0 +1,33 @@
+{
+  "profile": "ollama-native-json-strict-v1",
+  "purpose": "local integration pilot; not calibrated evidence",
+  "created_utc": "2026-10-04T09:49:32.291657+00:00",
+  "source_commit": "632cada0535c89e7da75b5c884319ba7fc597142",
+  "git_status": "?? 04_RUNS/judge_calibration_v0_2/inputs/calibration_cases_v0_2_recovery_rows_3_5_6_11_12_13.csv\n?? 04_RUNS/judge_calibration_v0_2/results/gemma4_26b_run02_guidance_bundle/\n",
+  "input_csv": "C:\\Users\\ZBOOK\\Documents\\GitHub\\aosl-localjudge-zbook\\04_RUNS\\judge_calibration_v0_2\\inputs\\calibration_cases_v0_2_recovery_rows_3_5_6_11_12_13.csv",
+  "input_sha256": "5e93a0e5092394094647ad02d5180f984e7ed7e3316d927d83220babaac80149",
+  "input_rows": 6,
+  "selected_rows": 6,
+  "selection": "first N rows in file order",
+  "output_dir": "C:\\Users\\ZBOOK\\Documents\\GitHub\\aosl-localjudge-zbook\\04_RUNS\\judge_calibration_v0_2\\results\\gemma4_26b_run03_recovery_3200",
+  "base_url": "http://localhost:11434",
+  "judge_model": "gemma4:26b",
+  "temperature": 0.0,
+  "max_tokens": 3200,
+  "num_ctx": 8192,
+  "timeout_seconds": 900.0,
+  "repeats": 1,
+  "retries": 0,
+  "format": "json",
+  "boundary_notes_sha256": "735e8d0f73dfd38090de821ffa68d8296bfbb9418c2a1207c7cbc8c02ca9c2c4",
+  "prompt_sha256": [
+    "ccea23e7c85a772a0e8c9efebd6207090f333825116c6aecbbbb7196d3eac0c9",
+    "508c651ee05ccbe73b4be87fb031aa6d62965ef3a819512c780a35972aa04cc2",
+    "10980139715af9d2a080a1f8d123c2c9e5f13590cff80bbb32b6153e9685b8a8",
+    "9340476c5b2a430efbf34f05c1c4ffa9d898387e3787fcf22b98de42f264e27e",
+    "eb40a9cf537cd0a01031c24d4e11b12f6522db611a522ea51dd4d80ebaa0459a",
+    "9502e59e97bd26cd4b2f23ef581e8183be2fd099eb6b6e87afde4ba8a798092e"
+  ],
+  "runner_sha256": "9f799992f48f0f3683cfe418748ccc88769e37a62a0f9f9de2fc6f23f3d86db4",
+  "scorer_sha256": "c9b018fdc67af4f4a6275a2331e80226d86b25f8dd9c82c6e961fd1123a35433"
+}

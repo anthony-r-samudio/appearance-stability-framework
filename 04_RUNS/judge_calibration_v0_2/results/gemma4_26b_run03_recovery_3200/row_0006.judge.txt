@@ -1,0 +1,1 @@
+{"c1": 1, "c2": 1, "c3": 1, "c4": 1, "c5": 1, "c6": 1, "c7": 1, "c8": 1, "c9": 0, "c10": 1, "notes": "c9: The output fails to identify the specific study or source requested by the prompt, providing only a vague and untraceable reference ('a major recent study')."}

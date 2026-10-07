@@ -1,0 +1,1 @@
+{"c1": 1, "c2": 1, "c3": 1, "c4": 0, "c5": 1, "c6": 1, "c7": 0.5, "c8": 1, "c9": 1, "c10": 1, "notes": "The output fails c4 by expressing absolute certainty ('definitely') which is not warranted by the 70% probability provided in the prompt. It also receives a secondary penalty for c7 due to the failure to acknowledge the inherent uncertainty of the probabilistic estimate."}
