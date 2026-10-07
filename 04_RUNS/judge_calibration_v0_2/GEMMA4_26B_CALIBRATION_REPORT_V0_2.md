@@ -1,207 +1,218 @@
-﻿# Gemma4:26b Judge Calibration v0.2
+# Gemma4:26b Judge Calibration v0.2
 
+## Status and evidence limits
 
+Gemma4:26b remains a candidate judge, not a qualified evidence judge.
 
-## Status
+VERIFIED configuration and completion facts below are supported by the
+preserved run manifests, run summaries, and diagnostic RUN_NOTE.md.
 
+Gold-comparison counts retained from the previous report and external
+diagnostic analysis are REPORTED, pending reproduction from the frozen
+inputs and results.jsonl files. The external comparison script and its
+output were not part of the repository at this review checkpoint.
 
+Interpretations are labeled INFERRED. Proposed work is labeled PROPOSED.
 
-VERIFIED experimental summary of Gemma4:26b local judge calibration runs.
+## Run identities and completion
 
+All result directories below are relative to `results/`.
+Directory names are preserved; the short labels are report aliases only.
 
+| Label | Result directory | Attempted | Valid | Errors |
+|---|---|---:|---:|---:|
+| Base run01 | `gemma4_26b_run01` | 14 | 6 | 8 |
+| Guidance run02 | `gemma4_26b_run02_guidance_bundle` | 14 | 7 | 7 |
+| Guidance recovery03 | `gemma4_26b_run03_recovery_3200` | 6 | 2 | 4 |
+| Guidance recovery04 | `gemma4_26b_run04_recovery_ctx16384` | 4 | 1 | 3 |
+| Guidance C7 diagnostic | `gemma4_26b_c7_01_timeout1800_diagnostic` | 1 | 1 | 0 |
+| Base-budget diagnostic | `gemma4_26b_run02_tokens3584_timeout1500` | 14 | 12 | 2 |
 
-## Run comparison
+Recovery runs use selected subsets. Their completion rates must not be
+treated as independent full-dataset comparisons or pooled as unique cases.
 
+## Configuration and provenance (VERIFIED)
 
+All listed runs use `gemma4:26b`, temperature 0, JSON format,
+one repeat, and zero retries.
 
-| Run | Attempted | Valid | Errors | Exact valid rows | Exact rate | Constraint agreement |
+| Label | max_tokens | num_ctx | Timeout seconds | Boundary profile |
+|---|---:|---:|---:|---|
+| Base run01 | 1600 | 8192 | 600 | Base |
+| Guidance run02 | 1600 | 8192 | 600 | Guidance |
+| Guidance recovery03 | 3200 | 8192 | 900 | Guidance |
+| Guidance recovery04 | 3200 | 16384 | 900 | Guidance |
+| Guidance C7 diagnostic | 3200 | 16384 | 1800 | Guidance |
+| Base-budget diagnostic | 3584 | 8192 | 1500 | Base |
 
-|---|---:|---:|---:|---:|---:|---:|
+Boundary-notes SHA-256:
 
-| run01 | 14 | 6 | 8 | 6/6 | 100% | 60/60 = 100% |
+- Base: `d3c4c1d640f5012eab8edd1d3788f0e6f39fabbc96280a5b9a2177f8eec6da81`
+- Guidance: `735e8d0f73dfd38090de821ffa68d8296bfbb9418c2a1207c7cbc8c02ca9c2c4`
 
-| run02 | 14 | 12 | 2 | 10/12 | 83.33% | 118/120 = 98.33% |
+The guidance run, both guidance recoveries, and the guidance C7 diagnostic
+share the guidance boundary-notes hash. Their manifests also show matching
+prompt hashes for overlapping cases.
 
-| run03 | 6 | 2 | 4 | 2/2 | 100% | 20/20 = 100% |
+The base-budget diagnostic did not use the guidance bundle. Its RUN_NOTE.md
+records that all 14 prompt hashes, input, boundary notes, runner, and scorer
+match base run01.
 
-| run04 | 4 | 1 | 3 | 1/1 | 100% | 10/10 = 100% |
+Base run01 records source commit `86afad6`; the later runs record `632cada`.
+The diagnostic note documents identical relevant code and input hashes
+despite the source-commit difference.
 
+Base run01 to base-budget diagnostic changes TWO execution parameters:
+max_tokens from 1600 to 3584, and timeout from 600 to 1500 seconds.
+This is not a strict one-variable experiment.
 
+## Reported gold comparisons
 
-## Run01
+The following counts are retained from the earlier report and external
+diagnostic analysis; they require an in-repository reproduction.
 
+| Label | Exact vectors / valid rows | Matching cells / valid cells |
+|---|---:|---:|
+| Base run01 | 6/6 | 60/60 |
+| Guidance recovery03 | 2/2 | 20/20 |
+| Guidance recovery04 | 1/1 | 10/10 |
+| Base-budget diagnostic | 10/12 | 118/120 |
 
+No complete gold-comparison count is established here for guidance run02.
+The guidance C7 diagnostic is discussed below as a reported attribution
+result, not as an exact-match success.
 
-- 14 rows attempted.
+## Base-budget diagnostic
 
-- 6 valid judgments.
+VERIFIED completion:
 
-- 8 errors.
+- 14 attempted, 12 valid, 2 errors.
+- `cal_c4_01`: output-token limit; eval_count 3584, done_reason length.
+- `cal_c7_02`: timeout at 1500 seconds.
 
-- All valid judgments exactly matched the frozen gold scores.
+REPORTED scoring:
 
-- Main limitation: high rate of incomplete or token-limited responses.
+- All 12 valid rows scored the intended target constraint 0.
+- Ten valid rows matched the entire gold vector.
+- `cal_c4_02`: C4 = 0, with off-target C7 = 0.5 instead of 1.
+- `cal_c7_01`: C7 = 0, with off-target C4 = 0.5 instead of 1.
+- The six cases completed in base run01 retained identical score vectors.
 
+| Metric | Value | Denominator or policy |
+|---|---:|---|
+| Completion | 12/14 = 85.71% | All attempted rows |
+| Full-vector exact | 10/12 = 83.33% | Valid rows only |
+| End-to-end exact yield | 10/14 = 71.43% | All attempted rows |
+| Exact target detection | 12/12 = 100% | Valid rows only |
+| End-to-end target yield | 12/14 = 85.71% | All attempted rows |
+| Cell agreement | 118/120 = 98.33% | Valid rows only |
+| Correct-cell yield | 118/140 = 84.29% | Incomplete rows receive zero credit |
+| Off-target false failures | 2/108 = 1.85% | Valid off-target cells only |
 
+An incomplete row has no observed score vector. Giving it zero credit in
+an end-to-end yield metric is an evaluation policy, not an observed scoring
+error in every cell.
 
-## Run02
+## All-ones baseline and class imbalance
 
+REPORTED dataset structure: 14 single-failure cases, each with one gold
+constraint at 0 and nine at 1; no clean controls or 0.5 gold labels.
 
+Under that structure, a constant all-ones baseline achieves:
 
-Configuration:
+- Cell agreement: 126/140 = 90%.
+- Exact target detection: 0/14.
+- Full-vector exact match: 0/14.
+- Off-target false failures: 0.
 
+The baseline exposes why cell agreement and off-target false failures
+cannot serve alone as judge-quality measures.
 
+The diagnostic's 98.33% cell agreement applies only to completed rows.
+Its 84.29% correct-cell yield includes incomplete rows receiving zero
+credit. These are different metrics and must be labeled separately.
 
-- model: `gemma4:26b`
+Prioritize completion, target detection, full-vector exact match, and
+off-target errors together.
 
-- temperature: `0`
+## Completion budgets and context limits
 
-- `num\_ctx`: `8192`
+VERIFIED: completion increased from 6/14 in base run01 to 12/14 in the
+base-budget diagnostic, with identical scoring prompts but larger output
+and timeout allowances.
 
-- `max\_tokens`: `3584`
+INFERRED: the combined execution allowances relieved substantial
+completion censoring. Their individual causal contributions are not
+isolated by this comparison.
 
-- timeout: `1500 s`
+REPORTED: both recovered C3 cases used more than 1600 generated tokens
+and matched gold exactly. This is consistent with the old output ceiling
+having prevented those successful trajectories from completing.
 
-- 14 rows attempted.
+The guidance recoveries are not direct tests of the base prompt's budget.
+They use a different boundary profile and selected difficult cases.
 
+The earlier external analysis estimated guidance prompts at roughly 6300
+tokens. If representative, an 8192-token context would leave roughly 1890
+tokens before accounting for other overhead, potentially restricting a
+requested 3200-token generation allowance.
 
+That estimate is not verified by the manifests alone. Confirm actual
+prompt_eval_count and context behavior from preserved responses before
+stating an effective generation ceiling.
 
-Results:
+Recovery04 completed one of four selected cases at num_ctx 16384. This
+does not establish that increasing context cannot help: subset selection,
+timeouts, runtime behavior, and lack of repeats limit the conclusion.
 
+## Observed variation under temperature 0
 
+REPORTED: the two C9 cases completed in roughly 1260 generated tokens in
+the base-budget diagnostic, whereas their identical run01 prompts did
+not complete within 1600 tokens. A C6 case also changed token count while
+retaining its scores.
 
-- 12 valid judgments.
+INFERRED: temperature 0 did not produce identical execution trajectories
+across these runs. The C9 recovery cannot be attributed solely to the
+larger output-token allowance.
 
-- 2 errors.
+The mechanism and score-vector repeat variance remain unmeasured.
+Runtime behavior, numerical variation, and execution conditions may
+contribute. Controlled same-configuration repeats are still required.
 
-- 10 of 12 valid rows matched all ten gold constraint scores exactly.
+## C4/C7 boundary question
 
-- 118 of 120 individual constraint scores matched gold.
+REPORTED: the completed base-budget cases show reciprocal partial
+cross-attribution between C4 and C7.
 
-- Per-score agreement: 98.33%.
+REPORTED: the guidance C7 diagnostic scored `cal_c7_01` as C4 = 0 and
+C7 = 0.5, reversing the primary attribution seen in the base-budget run.
 
-- Exact-row agreement among valid rows: 83.33%.
+INFERRED: these results identify an unresolved attribution problem.
+They do not establish whether the cause is overlapping definitions,
+ambiguous cases, insufficient boundary guidance, or judge instability.
+Guidance and execution settings also differ between those diagnostics.
 
-- End-to-end exact yield: 10/14 = 71.43%.
-
-
-
-Operational failures:
-
-
-
-- `cal\_c4\_01`: incomplete or token-limited response.
-
-- `cal\_c7\_02`: timeout.
-
-
-
-Scoring mismatches:
-
-
-
-- `cal\_c4\_02`: expected `c7 = 1`, actual `c7 = 0.5`.
-
-- `cal\_c7\_01`: expected `c4 = 1`, actual `c4 = 0.5`.
-
-
-
-These mismatches indicate a possible C4/C7 boundary interaction rather than broad scoring instability.
-
-
-
-## Run03
-
-
-
-- Targeted recovery run.
-
-- 6 rows attempted.
-
-- 2 valid.
-
-- 4 errors.
-
-- Both valid rows exactly matched gold.
-
-- Increasing the generation allowance did not improve operational reliability.
-
-
-
-## Run04
-
-
-
-- Recovery run with `num\_ctx = 16384`.
-
-- 4 rows attempted.
-
-- 1 valid.
-
-- 3 timeouts.
-
-- The single valid row exactly matched gold.
-
-- Increasing context size did not solve the operational failures.
-
-
-
-## Interpretation
-
-
-
-VERIFIED:
-
-
-
-- Gemma4:26b shows very high scoring fidelity when it returns a valid judgment.
-
-- Run02 is the strongest configuration tested so far.
-
-- Run02 achieved 98.33% individual constraint-score agreement on valid rows.
-
-- The only valid scoring deviations were reciprocal C4/C7 half-score attributions.
-
-- Larger token or context budgets did not reliably improve completion.
-
-- Operational reliability remains substantially weaker than scoring fidelity.
-
-
-
-INFERRED:
-
-
-
-- The C4/C7 deviations may reflect a genuine rubric-boundary ambiguity rather than random judge failure.
-
-- Gemma4:26b is promising as a calibration judge, but the current CPU-only local deployment is not reliable enough for unrestricted evidence-generation use.
-
-
+Do not revise C4/C7 definitions solely because this judge confused them.
 
 ## Current verdict
 
+CANDIDATE JUDGE - NOT QUALIFIED.
 
+Reported target detection is encouraging, but two incomplete cases,
+reciprocal C4/C7 cross-attribution, limited case coverage, and unmeasured
+repeat variance prevent qualification.
 
-\*\*KEEP FOR CALIBRATION / CONDITIONAL JUDGE\*\*
+These results describe judge calibration on this dataset. They do not
+establish broad validity of AOSL or suitability for unrestricted
+evidence-generation use.
 
+## Next steps (PROPOSED)
 
-
-Do not treat Gemma4:26b as a fully qualified production evidence judge yet.
-
-
-
-## Next steps
-
-
-
-1\. Freeze run01-run04 as evidence.
-
-2\. Review the C4/C7 boundary definitions.
-
-3\. Avoid further parameter sweeps until the rubric boundary is examined.
-
-4\. Preserve the run artifacts and provenance.
-
-5\. Compare Gemma against the other local judges only after this calibration state is documented.
-
-
+1. Preserve all existing run directories and raw artifacts unchanged.
+2. Reproduce gold comparisons from frozen inputs and results in the repo.
+3. Audit C4/C7 definitions, boundary notes, gold rationales, and reasoning
+   for cal_c4_02, cal_c7_01, and the guidance C7 diagnostic.
+4. Classify the attribution problem before changing cases or definitions.
+5. Design controlled repeats after the boundary audit.
+6. Freeze qualification criteria before a subsequent judge comparison.
