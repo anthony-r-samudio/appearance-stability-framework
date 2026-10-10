@@ -1,0 +1,7 @@
+﻿"CaseID","Status","ComputedDifference","ClaimedDifference","RuleBasedC1","OriginalModelC1","Disagreement","Reason"
+"S01","CHECKED_NO_MODEL_COMPARISON","30","30","0",,"False","Arithmetic checked; no C1 judgment supplied"
+"S02","CHECKED_NO_MODEL_COMPARISON","30","29","1",,"False","Arithmetic checked; no C1 judgment supplied"
+"S03","CHECKED_NO_MODEL_COMPARISON","0.20","0.20","0",,"False","Arithmetic checked; no C1 judgment supplied"
+"S04","NOT_CHECKED","0","0",,,"False","Non-positive increase outside supported rule"
+"S05","NOT_CHECKED",,,,,"False","Outside strict supported format"
+"S06","NOT_CHECKED",,,,,"False","Outside strict supported format"

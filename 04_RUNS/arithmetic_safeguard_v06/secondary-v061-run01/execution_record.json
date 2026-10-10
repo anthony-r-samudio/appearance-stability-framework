@@ -1,0 +1,23 @@
+﻿{
+    "study":  "AOSL Validation v0.6.1",
+    "run":  "secondary-v061-run01",
+    "evaluation_type":  "SECONDARY_POST_FAILURE",
+    "status":  "COMPLETED",
+    "started":  "2026-10-10T23:30:00.1063004+02:00",
+    "finished":  "2026-10-10T23:30:00.2183074+02:00",
+    "total_frozen_cases":  120,
+    "result_rows":  120,
+    "evaluator_sha256":  "240CDBF9A0C04289A5E4C702D0128E75E53511D324CE5EFE02054F5E19B94F25",
+    "cases_sha256":  "CAE2D9588D6D5FDAC2298993020906BEF62542B490401975D11EB5BFABD902CC",
+    "labels_sha256":  "748C5F9B127DAFE2227A30A54D5FC88C2A49DCD446DBD9D7632E9EB7D253E235",
+    "freeze_manifest_sha256":  "FE17BBB3F8776438EA5A6CC1A4AD61E92DD2FAFEC82DC5400D2A26AB1AE807C4",
+    "judgments_sha256":  "16EC5E0CFEC56B554D30F93CBD3E430F37D917B279819964BDCE1DFFBBFA3AD0",
+    "failed_primary_record_sha256":  "35826065DDF4B9058372DDD3625D3DD957174B74E25D198DDC5A0BD4AA7F09E4",
+    "labels_used_by_evaluator":  false,
+    "independent_validation":  false,
+    "primary_result_replaced":  false,
+    "output_exists":  true,
+    "output_sha256":  "9D4C816592779659671077BA619EF3B56B1B59FD8B18F6A60E54FB7FA6CC6059",
+    "error_recorded":  false,
+    "powershell_version":  "5.1.26100.9444"
+}
