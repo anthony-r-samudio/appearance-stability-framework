@@ -1,0 +1,45 @@
+﻿{
+    "study":  "AOSL Validation v0.6",
+    "status":  "FROZEN_BEFORE_PRIMARY_EVALUATION",
+    "registration_type":  "INTERNAL",
+    "externally_preregistered":  false,
+    "independent_authorship":  false,
+    "independent_label_review":  false,
+    "dataset_authoring":  "Internally generated with AI assistance",
+    "total_cases":  120,
+    "expected_checks":  66,
+    "expected_abstentions":  54,
+    "arithmetic_labels_audited":  66,
+    "abstention_labels_independently_validated":  false,
+    "evaluator_version":  "v0.5.1",
+    "evaluator_sha256":  "C6B09529244C14A97FBBABA1CD7481C060ABF3CEB25A2020343454939E79E660",
+    "protocol_sha256":  "A54C5703AF390EFC4112E99CA453585800247740EF40FBAFC02FB18F290972AD",
+    "authoring_brief_sha256":  "F994DEFE879D732E3EC0D541948E3C0A0C722BE1E0D52669C17AFC8DB7930999",
+    "frozen_cases_sha256":  "CAE2D9588D6D5FDAC2298993020906BEF62542B490401975D11EB5BFABD902CC",
+    "frozen_labels_sha256":  "748C5F9B127DAFE2227A30A54D5FC88C2A49DCD446DBD9D7632E9EB7D253E235",
+    "source_file_sha256":  {
+                               "PROTOCOL_v0.6.md":  "A54C5703AF390EFC4112E99CA453585800247740EF40FBAFC02FB18F290972AD",
+                               "CHALLENGE_AUTHORING_BRIEF_v0.6.md":  "F994DEFE879D732E3EC0D541948E3C0A0C722BE1E0D52669C17AFC8DB7930999",
+                               "GROUP_A_CASES_DRAFT.csv":  "3A0D085A8AE2F1B4FADD249E51E868056A1C4C21281E8A15B89B084ED62B6DCD",
+                               "GROUP_A_LABELS_DRAFT.csv":  "FC556403BD04E71E4C2C77C5CFCA0780A25410F6456699C1586171C67F985128",
+                               "GROUP_B_CASES_DRAFT.csv":  "631EF64873F0BF3D45C74A162F47C8F552829CC3490A7AEF970687B8220AABC5",
+                               "GROUP_B_LABELS_DRAFT.csv":  "0CAD9A6F3FF3DB80A294B8998942BB540566F63F33E69D36EBB91F0BE7D8AEFD",
+                               "GROUP_C_CASES_DRAFT.csv":  "2809CCE4A80A763ECB2B441A5E4C2E5F77FB0FC415DBCD00B0C6DE101E9BDEA2",
+                               "GROUP_C_LABELS_DRAFT.csv":  "6E140E5F4DB2C74B2AA5E9EBE0CF3B5D3380F9522F956A19EFBD7E08661D0079",
+                               "GROUP_D_CASES_DRAFT.csv":  "74D83BDA39EA0BE214FCA0F8168A9427E5370F8E0E1860EF77C0F23F274A618E",
+                               "GROUP_D_LABELS_DRAFT.csv":  "097590D148105F41ECDCC93D3FC1167C2636A447DACE40F0E452D3F59296174F"
+                           },
+    "evaluation_executed":  false,
+    "failure_policy":  [
+                           "Only one primary evaluation attempt",
+                           "Do not modify evaluator or frozen inputs",
+                           "Record any uncontrolled exception as execution failure",
+                           "Do not convert exceptions into successful abstentions",
+                           "Keep any repaired run separate and explicitly post-failure"
+                       ],
+    "known_risks":  [
+                        "Out-of-range numerical strings may cause decimal parsing exceptions",
+                        "Dataset authorship is internal rather than independent",
+                        "The safeguard supports only a narrow revenue-increase grammar"
+                    ]
+}

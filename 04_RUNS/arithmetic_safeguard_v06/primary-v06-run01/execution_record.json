@@ -1,0 +1,20 @@
+﻿{
+    "study":  "AOSL Validation v0.6",
+    "run":  "primary-v06-run01",
+    "evaluation_type":  "PRIMARY_INTERNAL_CHALLENGE",
+    "status":  "EXECUTION_FAILED",
+    "started":  "2026-10-10T23:17:12.0500233+02:00",
+    "finished":  "2026-10-10T23:17:12.3781005+02:00",
+    "powershell_version":  "5.1.26100.9444",
+    "os_version":  "Microsoft Windows NT 10.0.26300.0",
+    "evaluator_sha256":  "C6B09529244C14A97FBBABA1CD7481C060ABF3CEB25A2020343454939E79E660",
+    "cases_sha256":  "CAE2D9588D6D5FDAC2298993020906BEF62542B490401975D11EB5BFABD902CC",
+    "labels_sha256":  "748C5F9B127DAFE2227A30A54D5FC88C2A49DCD446DBD9D7632E9EB7D253E235",
+    "freeze_manifest_sha256":  "FE17BBB3F8776438EA5A6CC1A4AD61E92DD2FAFEC82DC5400D2A26AB1AE807C4",
+    "judgments_sha256":  "16EC5E0CFEC56B554D30F93CBD3E430F37D917B279819964BDCE1DFFBBFA3AD0",
+    "reference_labels_used_by_evaluator":  false,
+    "output_exists":  false,
+    "output_sha256":  null,
+    "error_recorded":  true,
+    "independent_validation":  false
+}

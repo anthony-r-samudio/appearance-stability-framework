@@ -1,0 +1,40 @@
+﻿{
+    "study":  "AOSL Validation v0.6",
+    "run":  "primary-v06-run01",
+    "primary_status":  "EXECUTION_FAILED",
+    "observed_error":  "Decimal OverflowException",
+    "diagnostic_method":  "Post-failure inspection of frozen inputs",
+    "parsing_failure_count":  3,
+    "affected_case_count":  2,
+    "affected_cases":  [
+                           {
+                               "case_id":  "V6-119",
+                               "failing_fields":  [
+                                                      "after",
+                                                      "claimed"
+                                                  ]
+                           },
+                           {
+                               "case_id":  "V6-120",
+                               "failing_fields":  [
+                                                      "claimed"
+                                                  ]
+                           }
+                       ],
+    "root_cause":  "Syntactically accepted numeric strings exceed System.Decimal range",
+    "evidence_strength":  "Parsing failures reproduced; original exception did not identify a case ID",
+    "primary_results_created":  false,
+    "primary_rerun":  false,
+    "proposed_repair":  "Use guarded decimal conversion and controlled abstention for unrepresentable numbers",
+    "next_version":  "v0.6.1",
+    "next_evaluation_type":  "SECONDARY_POST_FAILURE",
+    "independent_validation":  false,
+    "evaluator_sha256":  "C6B09529244C14A97FBBABA1CD7481C060ABF3CEB25A2020343454939E79E660",
+    "frozen_cases_sha256":  "CAE2D9588D6D5FDAC2298993020906BEF62542B490401975D11EB5BFABD902CC",
+    "primary_execution_record_sha256":  "35826065DDF4B9058372DDD3625D3DD957174B74E25D198DDC5A0BD4AA7F09E4",
+    "limitations":  [
+                        "Primary classification accuracy unavailable",
+                        "Original failure lacked case-specific attribution",
+                        "Post-failure diagnosis is not independent validation"
+                    ]
+}

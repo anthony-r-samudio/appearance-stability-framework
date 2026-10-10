@@ -1,0 +1,7 @@
+﻿"case_id","evidence","response"
+"S01","Revenue was CHF 20 before and CHF 50 after.","Revenue increased by CHF 30."
+"S02","Revenue was CHF 20 before and CHF 50 after.","Revenue increased by CHF 29."
+"S03","Revenue was CHF 0.10 before and CHF 0.30 after.","Revenue increased by CHF 0.20."
+"S04","Revenue was CHF 10 before and CHF 10 after.","Revenue increased by CHF 0."
+"S05","Revenue rose from CHF 10 to CHF 20.","Revenue increased by CHF 10."
+"S06","Revenue was CHF 10 before and CHF 20 after.","Revenue increased by CHF １０."
